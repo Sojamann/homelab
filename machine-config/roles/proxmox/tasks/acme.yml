@@ -1,0 +1,66 @@
+---
+# The ACME account and the DNS plugin live in /etc/pve, which is replicated
+# across the cluster -- so they are configured once, on the primary node.
+- name: Configure the cluster-wide ACME account and DNS plugin
+  when: inventory_hostname == cluster_primary
+  block:
+    - name: List registered ACME accounts
+      ansible.builtin.command: pvenode acme account list
+      register: acme_accounts
+      changed_when: false
+      failed_when: false
+
+    - name: Register the ACME account
+      ansible.builtin.command: >-
+        pvenode acme account register {{ acme_account }} {{ acme_email }}
+        --directory {{ acme_directory }}
+      args:
+        stdin: "y\n"
+      when: acme_account not in acme_accounts.stdout
+      changed_when: true
+
+    - name: List configured ACME plugins
+      ansible.builtin.command: pvenode acme plugin list
+      register: acme_plugins
+      changed_when: false
+
+    - name: Configure the Cloudflare DNS plugin
+      when: acme_plugin not in acme_plugins.stdout
+      block:
+        - name: Stage the Cloudflare credentials
+          ansible.builtin.copy:
+            content: "CF_Token={{ cloudflare_api_token }}\n"
+            dest: /root/.acme-cf-data
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Add the Cloudflare DNS plugin
+          ansible.builtin.command: >-
+            pvenode acme plugin add dns {{ acme_plugin }}
+            --api cf --data /root/.acme-cf-data
+          changed_when: true
+      always:
+        - name: Remove the staged credentials
+          ansible.builtin.file:
+            path: /root/.acme-cf-data
+            state: absent
+
+# Certificates are per node. Proxmox renews them itself via its own timer, so
+# machine-config only has to place the initial order.
+- name: Bind this node's ACME domain to the DNS plugin
+  ansible.builtin.command: >-
+    pvenode config set --acme account={{ acme_account }}
+    --acmedomain0 {{ fqdn }},plugin={{ acme_plugin }}
+  register: acme_bind
+  changed_when: false
+
+- name: Check for an existing ACME certificate
+  ansible.builtin.stat:
+    path: /etc/pve/local/pveproxy-ssl.pem
+  register: pve_cert
+
+- name: Order the certificate
+  ansible.builtin.command: pvenode acme cert order
+  when: not pve_cert.stat.exists
+  changed_when: true

@@ -1,0 +1,80 @@
+---
+# Stage-2 (terraform) authenticates with this token. Proxmox prints a token's
+# secret exactly once, so if the node has a token whose value we no longer
+# hold, the only convergent move is to recreate it.
+
+- name: List Proxmox roles
+  ansible.builtin.command: pveum role list --output-format json
+  register: pve_roles
+  changed_when: false
+
+- name: Create the provisioning role
+  ansible.builtin.command: >-
+    pveum role add {{ pve_api_role }} --privs "{{ pve_api_role_privs | trim }}"
+  when: pve_api_role not in (pve_roles.stdout | from_json | map(attribute='roleid'))
+  changed_when: true
+
+- name: List Proxmox users
+  ansible.builtin.command: pveum user list --output-format json
+  register: pve_users
+  changed_when: false
+
+- name: Create the provisioning user
+  ansible.builtin.command: pveum user add {{ pve_api_user }}
+  when: pve_api_user not in (pve_users.stdout | from_json | map(attribute='userid'))
+  changed_when: true
+
+- name: Grant the provisioning role
+  ansible.builtin.command: >-
+    pveum acl modify / --users {{ pve_api_user }} --roles {{ pve_api_role }}
+  changed_when: false
+
+- name: List the user's API tokens
+  ansible.builtin.command: pveum user token list {{ pve_api_user }} --output-format json
+  register: pve_tokens
+  changed_when: false
+
+- name: Mint the API token
+  when: >-
+    pve_api_token is not defined
+    or pve_api_token_name not in (pve_tokens.stdout | from_json | map(attribute='tokenid'))
+  vars:
+    pve_token_path: "{{ playbook_dir }}/../secrets/proxmox-token.yml"
+  block:
+    - name: Remove the orphaned token
+      ansible.builtin.command: pveum user token remove {{ pve_api_user }} {{ pve_api_token_name }}
+      when: pve_api_token_name in (pve_tokens.stdout | from_json | map(attribute='tokenid'))
+      changed_when: true
+
+    - name: Create the token
+      ansible.builtin.command: >-
+        pveum user token add {{ pve_api_user }} {{ pve_api_token_name }}
+        --privsep 0 --output-format json
+      register: new_token
+      changed_when: true
+      no_log: true
+
+    # Stored whole (`user@realm!name=secret`) so the guests layer never has to
+    # reassemble it from identifiers that live in this role's defaults.
+    - name: Write the token
+      ansible.builtin.copy:
+        content: >
+          pve_api_token: {{ (new_token.stdout | from_json)['full-tokenid'] }}={{
+          (new_token.stdout | from_json)['value'] }}
+        dest: "{{ pve_token_path }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+      no_log: true
+
+    # Encrypted as a whole file rather than with encrypt_string, so that
+    # `ansible-vault view` -- how the guests layer reads it -- works on it.
+    - name: Encrypt the token file
+      ansible.builtin.command: >-
+        ansible-vault encrypt
+        --vault-password-file {{ playbook_dir }}/../secrets/.vault-pass
+        --encrypt-vault-id default
+        {{ pve_token_path }}
+      delegate_to: localhost
+      become: false
+      changed_when: true

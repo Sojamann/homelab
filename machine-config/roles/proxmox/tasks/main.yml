@@ -1,0 +1,38 @@
+---
+- name: Detect whether this is the host's first run
+  ansible.builtin.import_tasks: first_run.yml
+
+- name: Assert cluster membership
+  ansible.builtin.import_tasks: cluster.yml
+
+- name: Configure apt repositories
+  ansible.builtin.import_tasks: repos.yml
+
+- name: Upgrade packages
+  ansible.builtin.import_tasks: upgrade.yml
+
+- name: Remove the subscription nag
+  ansible.builtin.import_tasks: nag.yml
+
+- name: Make vmbr0 VLAN aware
+  ansible.builtin.import_tasks: network.yml
+
+- name: Configure storage
+  ansible.builtin.import_tasks: storage.yml
+
+- name: Order a certificate via ACME
+  ansible.builtin.import_tasks: acme.yml
+
+- name: Provision the API token for the guests layer
+  ansible.builtin.import_tasks: api_token.yml
+  when: inventory_hostname == cluster_primary
+
+- name: Mark this host as initialised
+  ansible.builtin.file:
+    path: /etc/lab/.stage1-initialized
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"
+    modification_time: preserve
+    access_time: preserve

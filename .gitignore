@@ -1,0 +1,18 @@
+# Provider plugins and the recorded backend config, re-created by `tofu init`.
+/guests/.terraform/
+/network/.terraform/
+/cluster/.terraform/
+/platform/.terraform/
+
+# Every layer's state is committed, encrypted -- but to `secrets/`, a private
+# submodule, and never here. Each layer's `backend` block argues its own case.
+# This rule is the backstop: a state file that turns up in a layer directory
+# means a `path` went wrong, and it must not reach a repo that will be public.
+*.tfstate
+*.tfstate.*
+
+# local, never committed
+*.local.toml
+*.local.tfvars
+.local-setup/
+.claude/

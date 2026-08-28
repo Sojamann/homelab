@@ -1,0 +1,6 @@
+[submodule "flux"]
+	path = flux
+	url = git@github.com:Sojamann/homelab-apps.git
+[submodule "secrets"]
+	path = secrets
+	url = git@github.com:Sojamann/homelab-secrets.git

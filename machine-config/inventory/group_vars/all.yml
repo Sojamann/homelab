@@ -1,0 +1,12 @@
+---
+ansible_user: root
+
+# `zone` comes from secrets/vault.yml, which site.yml loads through vars_files.
+# It is the one thing here that is not committed, so it is the one thing that
+# has to be looked up rather than written down.
+lab_domain: "lab.{{ zone }}"
+
+# Hosts connect by IP so a run never depends on DNS. The FQDN is carried
+# alongside for the places that genuinely need a name -- the certificate and
+# the Proxmox API URL.
+fqdn: "{{ inventory_hostname }}.{{ lab_domain }}"

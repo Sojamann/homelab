@@ -1,0 +1,46 @@
+---
+# One pool for everything. On the small node disks a split between root and an
+# LVM-thin pool only strands space in whichever half fills last, so guests live
+# as qcow2 files on `local`. An NFS datastore from the NAS comes later.
+
+- name: Read the configured storages
+  ansible.builtin.command: pvesh get /storage --output-format json
+  register: pve_storage
+  changed_when: false
+
+- name: Set the content types on local
+  ansible.builtin.command: >-
+    pvesm set {{ pve_datastore }} --content {{ pve_datastore_content }}
+  when: >-
+    (pve_storage.stdout | from_json
+     | selectattr('storage', 'eq', pve_datastore) | first).content
+    | default('') | split(',') | sort
+    != pve_datastore_content | split(',') | sort
+  changed_when: true
+
+# Installing with maxvz=0 means this never exists. It does on nodes installed
+# before that was the rule, and an empty one is just wasted capacity.
+- name: Drop the unused thin pool storage
+  when: "'local-lvm' in (pve_storage.stdout | from_json | map(attribute='storage'))"
+  block:
+    - name: List volumes on local-lvm
+      ansible.builtin.command: pvesm list local-lvm --output-format json
+      register: lvm_volumes
+      changed_when: false
+
+    - name: Refuse to remove a thin pool that is in use
+      ansible.builtin.assert:
+        that: (lvm_volumes.stdout | from_json) | length == 0
+        fail_msg: >-
+          local-lvm on {{ inventory_hostname }} still holds volumes. Move them
+          to {{ pve_datastore }} by hand before rerunning.
+
+    - name: Remove the local-lvm storage
+      ansible.builtin.command: pvesm remove local-lvm
+      changed_when: true
+
+    - name: Report the reclaimable space
+      ansible.builtin.debug:
+        msg: >-
+          local-lvm is unconfigured, but the pve/data logical volume still
+          holds the space. Reclaim it manually -- see machines/proxmox.md.

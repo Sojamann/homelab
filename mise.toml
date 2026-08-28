@@ -1,0 +1,33 @@
+[tools]
+"pipx:ansible-core" = "2.20"
+opentofu = "1.12"
+talosctl = "1.13"
+kubectl = "1.36"
+
+[env]
+KUBECONFIG = "{{ config_root }}/secrets/kubeconfig"
+TALOSCONFIG = "{{ config_root }}/secrets/talosconfig"
+
+[tasks.save]
+description = "Commit the staged changes here plus whatever is dirty in flux/ and secrets/"
+run = "./scripts/save.sh"
+
+[tasks.machine-config]
+description = "Configure the machines"
+run = "ansible-playbook machine-config/site.yml"
+
+[tasks.network]
+description = "Apply the network layer (args are forwarded to tofu)"
+run = "./scripts/tofu.sh network"
+
+[tasks.guests]
+description = "Provision the guests (args are forwarded to tofu)"
+run = "./scripts/tofu.sh guests"
+
+[tasks.cluster]
+description = "Bootstrap and configure the Talos cluster (args are forwarded to tofu)"
+run = "./scripts/tofu.sh cluster"
+
+[tasks.platform]
+description = "Install the cluster's platform components (args are forwarded to tofu)"
+run = "./scripts/tofu.sh platform"

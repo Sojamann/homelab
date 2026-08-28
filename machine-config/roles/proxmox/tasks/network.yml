@@ -1,0 +1,21 @@
+---
+# VMs are tagged onto VLANs (k8s is VLAN 40). Proxmox's default bridge is not
+# VLAN aware, which makes those tags silently do nothing.
+- name: Read the current vmbr0 configuration
+  ansible.builtin.command: pvesh get /nodes/{{ inventory_hostname }}/network/vmbr0 --output-format json
+  register: vmbr0
+  changed_when: false
+
+- name: Enable VLAN awareness on vmbr0
+  when: (vmbr0.stdout | from_json).bridge_vlan_aware | default(0) | int != 1
+  block:
+    - name: Set bridge_vlan_aware
+      # The API requires `type` on every update, not just on creation.
+      ansible.builtin.command: >-
+        pvesh set /nodes/{{ inventory_hostname }}/network/vmbr0
+        --type bridge --bridge_vlan_aware 1 --bridge_vids 2-4094
+      changed_when: true
+
+    - name: Apply the pending network configuration
+      ansible.builtin.command: pvesh set /nodes/{{ inventory_hostname }}/network
+      changed_when: true

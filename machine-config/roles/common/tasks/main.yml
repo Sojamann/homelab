@@ -1,0 +1,13 @@
+---
+# Baseline true for every physical host, regardless of function.
+
+# /etc/timezone is legacy Debian and is not present on PVE 9; systemd is the authority.
+- name: Read the currently configured timezone
+  ansible.builtin.command: timedatectl show --property=Timezone --value
+  register: current_tz
+  changed_when: false
+
+- name: Set the timezone
+  ansible.builtin.command: timedatectl set-timezone {{ lab_timezone }}
+  when: current_tz.stdout | trim != lab_timezone
+  changed_when: true

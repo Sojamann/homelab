@@ -1,0 +1,34 @@
+---
+# The enterprise repositories are disabled rather than deleted: a pve-manager
+# upgrade can recreate the file, and a disabled file keeps the intent visible.
+- name: Check which enterprise repositories are present
+  ansible.builtin.stat:
+    path: /etc/apt/sources.list.d/{{ item }}.sources
+  loop: "{{ pve_enterprise_sources }}"
+  register: enterprise_files
+
+- name: Disable the enterprise repositories
+  ansible.builtin.lineinfile:
+    path: /etc/apt/sources.list.d/{{ item.item }}.sources
+    regexp: '^Enabled:'
+    line: 'Enabled: no'
+    insertafter: EOF
+  loop: "{{ enterprise_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.stat.exists
+  notify: Update apt cache
+
+- name: Add the no-subscription repository
+  ansible.builtin.deb822_repository:
+    name: pve-no-subscription
+    types: [deb]
+    uris: http://download.proxmox.com/debian/pve
+    suites: ["{{ pve_release }}"]
+    components: [pve-no-subscription]
+    signed_by: /usr/share/keyrings/proxmox-archive-keyring.gpg
+    enabled: true
+  notify: Update apt cache
+
+- name: Apply pending apt cache updates
+  ansible.builtin.meta: flush_handlers

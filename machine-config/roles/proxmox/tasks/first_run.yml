@@ -1,0 +1,20 @@
+---
+# Only a host's very first run is allowed to reboot itself. Re-running the
+# playbook after adding a new machine must not disturb the existing ones.
+
+- name: Ensure the lab state directory exists
+  ansible.builtin.file:
+    path: /etc/lab
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Detect whether this host has been initialised before
+  ansible.builtin.stat:
+    path: /etc/lab/.stage1-initialized
+  register: init_marker
+
+- name: Record whether this is the host's first run
+  ansible.builtin.set_fact:
+    first_run: "{{ not init_marker.stat.exists }}"

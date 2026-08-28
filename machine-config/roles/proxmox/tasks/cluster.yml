@@ -1,0 +1,19 @@
+---
+# Cluster formation is a manual machines step (it needs root@pam's password,
+# which deliberately does not live in this repo). machine-config only verifies it.
+
+- name: Query cluster status
+  ansible.builtin.command: pvecm status
+  register: pvecm_status
+  changed_when: false
+  failed_when: false
+
+- name: Fail if this node is not part of a quorate cluster
+  ansible.builtin.assert:
+    that:
+      - pvecm_status.rc == 0
+      # pvecm pads the value, so match on whitespace rather than a literal.
+      - pvecm_status.stdout is search('Quorate:\\s+Yes')
+    fail_msg: >-
+      {{ inventory_hostname }} is not in a quorate cluster. Complete the
+      machines cluster step (pvecm create / pvecm add) before running machine-config.

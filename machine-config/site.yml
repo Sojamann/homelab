@@ -1,0 +1,45 @@
+---
+- name: Configure physical hosts
+  hosts: all
+  gather_facts: true
+  serial: 1
+  # A failed run must still restart what earlier tasks changed -- otherwise a
+  # patched pveproxy sits unrestarted until something else happens to notify.
+  force_handlers: true
+
+  vars_files:
+    - ../secrets/vault.yml
+
+  pre_tasks:
+    # A vars_files entry that does not resolve is not fatal on its own, so the
+    # run would otherwise get most of the way through before noticing.
+    - name: Assert the vault is loaded
+      ansible.builtin.assert:
+        that:
+          - acme_email is defined
+          - cloudflare_api_token is defined
+        fail_msg: >-
+          secrets/vault.yml did not load. Copy secrets.example.yml and
+          encrypt it with ansible-vault.
+      run_once: true
+      delegate_to: localhost
+      become: false
+
+    # Written by the proxmox role on first run; absent before the API token
+    # has ever been minted, so it cannot be a vars_files entry.
+    - name: Check for a previously captured Proxmox API token
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/../secrets/proxmox-token.yml"
+      register: token_stat
+      delegate_to: localhost
+      become: false
+
+    - name: Load the captured Proxmox API token
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../secrets/proxmox-token.yml"
+      when: token_stat.stat.exists
+
+  roles:
+    - common
+    - role: proxmox
+      when: "'proxmox' in group_names"
