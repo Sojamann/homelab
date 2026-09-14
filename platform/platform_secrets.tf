@@ -41,3 +41,26 @@ resource "vault_kv_secret_v2" "paperless" {
     admin-password = random_password.paperless_admin.result
   })
 }
+
+####################################
+#            GRAFANA               #
+####################################
+
+resource "random_password" "grafana_admin" {
+  length  = 32
+  special = false
+}
+
+resource "vault_kv_secret_v2" "grafana" {
+  mount = vault_mount.kv.path
+  name  = "monitoring/grafana"
+
+  delete_all_versions = true
+
+  # Grafana is stateless (no PVC), so unlike paperless the admin is re-read
+  # from here on every start -- rotating it takes effect on the next restart.
+  data_json = jsonencode({
+    admin-user     = "admin"
+    admin-password = random_password.grafana_admin.result
+  })
+}
