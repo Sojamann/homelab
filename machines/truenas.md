@@ -107,6 +107,7 @@ Rules:
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
 ├── pbs-backups/     PBS datastore
+├── node-exporter/   textfile metrics, see Monitoring
 ├── users/<name>/files/          the SMB share root
 └── users/<name>/time-machine/   (optional) one Mac
 ```
@@ -131,6 +132,7 @@ by hand, and every `bulk` volume lives within it.
 |-----------------------------|------------|-------|-------------------|-------------------------|
 | `k8s-csi`                   | 128K       | lz4   | hourly (24h retention) + daily (30d retention), **not** recursive | NFS, the `bulk` StorageClass |
 | `pbs-backups`               | 1M         | lz4   | daily, **3d**     | PBS                     |
+| `node-exporter`             | 128K       | lz4   | **none**          | node-exporter app (ro)  |
 | `users`                     | 128K       | zstd  | hourly (24h retention) + daily (30d retention), recursive, exclude `users/*/time-machine` | -- (children only) |
 | `users/<name>`              | 128K       | zstd  | via `users` task  | -- (children only)      |
 | `users/<name>/files`        | 128K       | zstd  | via `users` task  | SMB, per person         |
@@ -148,6 +150,7 @@ no per-user task. Recursive means one snapshot **per dataset** (same name,
 atomic), not one snapshot of the tree: each user rolls back and browses
 `.zfs/snapshot` independently.
 - `pbs-backups` -- same trap: snapshots pin chunks PBS GC wants to free.
+- `node-exporter` -- rewritten every minute, nothing worth keeping.
 - `k8s-csi` -- not recursive: the PVs under it are directories, not datasets,
   so one task on the one dataset is already every volume. And `lz4`, not the
   `zstd` the user datasets take -- PDFs and images are compressed already.
@@ -191,6 +194,7 @@ in *System* -> *General* -> *GUI*, the rest on each service:
 | SSH     | `10.212.2.150`                        | same                         |
 | NVMe-oF | `10.212.4.150`                        | the cluster, nothing else    |
 | NFS     | `10.212.4.150`                        | the cluster, nothing else    |
+| node-exporter | `10.212.4.150:9100`             | Prometheus, see [Monitoring](#monitoring) |
 
 The UI is the uncomfortable row: TrueNAS serves it and the API on one listener
 and cannot split them, so the login page is reachable from k8s. Taken
@@ -293,6 +297,43 @@ pair -- NFS adds a third listener there and still no rule.
 `10.212.4.0/24` is default-deny outbound with no exceptions. The one policy
 that touches this is `nvmeof-deny-cross-vlan`, keeping the other four networks
 away from `10.212.4.150:4420` -- see [network](../network/README.md).
+
+## Monitoring
+
+node-exporter as a custom app, scraped by the cluster's Prometheus -- see
+[flux/docs/monitoring.md](../flux/docs/monitoring.md). Same VLAN, no firewall rule.
+
+1. *Apps* -> *Configuration* -> *Choose Pool*: `slow` -- never `fast`, which
+   democratic-csi owns
+2. dataset `slow/node-exporter`, preset **Generic** -- the textfile directory
+3. *System* -> *Advanced* -> *Cron Jobs* -> *Add*, user `root`, every minute:
+   ```sh
+   zpool list -Hp -o name,size,alloc,free | awk '{printf "nas_zpool_size_bytes{pool=\"%s\"} %s\nnas_zpool_allocated_bytes{pool=\"%s\"} %s\nnas_zpool_free_bytes{pool=\"%s\"} %s\n",$1,$2,$1,$3,$1,$4}' > /mnt/slow/node-exporter/zpool.prom.tmp && mv /mnt/slow/node-exporter/zpool.prom.tmp /mnt/slow/node-exporter/zpool.prom
+   ```
+   node-exporter cannot see pool size; `mv` keeps it from reading half a file
+4. *Apps* -> *Discover Apps* -> *Custom App* -> *Install via YAML*:
+   ```yaml
+   services:
+     node-exporter:
+       image: quay.io/prometheus/node-exporter:v1.12.1
+       network_mode: host
+       pid: host
+       restart: unless-stopped
+       command:
+         - --path.rootfs=/host
+         - --web.listen-address=10.212.4.150:9100
+         - --collector.textfile.directory=/textfile
+       volumes:
+         - /:/host:ro,rslave
+         - /mnt/slow/node-exporter:/textfile:ro
+   ```
+5. verify from Trusted:
+   ```sh
+   curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|node_zfs_zpool_state)'
+   ```
+   every pool with size, and `state="online"` at `1`
+
+Pool state comes from node-exporter itself; SMART is not exported.
 
 ## Backup Layers
 
