@@ -11,6 +11,11 @@ pve_enterprise_sources:
 # reboot on an already-initialised host (e.g. to pick up a new kernel).
 reboot_ok: false
 
+# Per-host NIC driver workarounds, set in host_vars. Each entry names an
+# interface, the reason it needs one, and the ethtool argument lists to apply;
+# `{iface}` expands to the interface name.
+nic_quirks: []
+
 acme_account: default
 acme_directory: https://acme-v02.api.letsencrypt.org/directory
 acme_plugin: cloudflare

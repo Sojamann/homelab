@@ -15,7 +15,7 @@ mise run machine-config -- --limit mimas
 ```
 
 `inventory/` is a plain, committed ansible inventory. Machines that do not
-exist yet stay commented out in `hosts.yml`. 
+exist yet stay commented out in `hosts.yml`.
 
 ### Secrets
 
@@ -43,6 +43,7 @@ the value.
 | `dist-upgrade` | `apt upgrade` would hold back PVE updates and half-upgrade the node |
 | Remove the subscription nag | Reapplied every run; every `pve-manager` upgrade reverts it |
 | VLAN-aware `vmbr0` | Required for VMs tagged onto VLAN 40 (k8s); the default bridge silently drops tags |
+| Per-host NIC quirks | `ethtool` settings that work around driver bugs, applied by a systemd unit bound to the device. Empty unless a host sets `nic_quirks` -- see [known hardware quirks](#known-hardware-quirks) |
 | Single-pool storage | `local` holds guest disks, ISOs, templates, backups and cloud-init snippets; an unused `local-lvm` is removed. The disk itself is never repartitioned -- see [machines](../machines/proxmox.md) |
 | ACME certificate | Proxmox's built-in client, DNS-01 via Cloudflare. **Proxmox owns renewal** -- nothing here watches it |
 | API user + token | The identity guests uses; secret captured into the vault |
@@ -60,6 +61,12 @@ already-initialised host reports a pending reboot instead:
 ```sh
 mise run machine-config -- -e reboot_ok=true
 ```
+
+## Known hardware quirks
+
+| Host | Quirk |
+|------|-------|
+| titan | Onboard Intel I219 (`e1000e`) wedges its TX DMA engine under TSO/GSO and EEE, taking the host off the network with the link still up. The driver never resets the adapter, so only a power cycle recovers it. `nic_quirks` disables all three. **Unproven** -- still under observation |
 
 ## Known trade-offs
 

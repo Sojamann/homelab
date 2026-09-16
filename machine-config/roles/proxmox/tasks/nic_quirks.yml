@@ -1,0 +1,48 @@
+---
+# Per-host NIC workarounds. Driver bugs are host-specific, so `nic_quirks` is
+# empty by default and set in host_vars for the machines that need it.
+- name: Apply NIC quirks
+  when: nic_quirks | length > 0
+  block:
+    - name: Install ethtool
+      ansible.builtin.apt:
+        name: ethtool
+        state: present
+
+    # Bound to the device unit rather than written as `post-up` lines in
+    # /etc/network/interfaces: network.yml drives networking through `pvesh`,
+    # which rewrites that file, and a quirk that a later run silently drops is
+    # worse than no quirk at all.
+    - name: Install the quirk units
+      ansible.builtin.template:
+        src: nic-quirks.service.j2
+        dest: /etc/systemd/system/nic-quirks-{{ q.interface }}.service
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ nic_quirks }}"
+      loop_control:
+        loop_var: q
+        label: "{{ q.interface }}"
+      register: nic_quirk_units
+
+    - name: Enable the quirk units
+      ansible.builtin.systemd_service:
+        name: nic-quirks-{{ q.interface }}.service
+        enabled: true
+        daemon_reload: true
+      loop: "{{ nic_quirks }}"
+      loop_control:
+        loop_var: q
+        label: "{{ q.interface }}"
+
+    # The unit fires when the device appears, so on a run that did not reboot
+    # it has to be started by hand to take effect now rather than next boot.
+    - name: Apply the quirks now
+      ansible.builtin.systemd_service:
+        name: nic-quirks-{{ r.q.interface }}.service
+        state: restarted
+      loop: "{{ nic_quirk_units.results | selectattr('changed') | list }}"
+      loop_control:
+        loop_var: r
+        label: "{{ r.q.interface }}"

@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# {{ q.reason }}
+[Unit]
+Description=ethtool quirks for {{ q.interface }}
+BindsTo=sys-subsystem-net-devices-{{ q.interface }}.device
+After=sys-subsystem-net-devices-{{ q.interface }}.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+{% for opt in q.options %}
+ExecStart=/usr/sbin/ethtool {{ opt | replace('{iface}', q.interface) }}
+{% endfor %}
+
+[Install]
+WantedBy=sys-subsystem-net-devices-{{ q.interface }}.device

@@ -1,0 +1,11 @@
+---
+# The onboard Intel I219 (e1000e, 0000:00:1f.6) wedges its TX DMA engine: TDH
+# stops advancing, the driver never resets the adapter, and the host falls off
+# the network while the link stays up. TSO/GSO and EEE are the two documented
+# trigger classes.
+nic_quirks:
+  - interface: nic0
+    reason: e1000e TX unit hang -- driver never recovers, host drops off the network
+    options:
+      - -K {iface} tso off gso off
+      - --set-eee {iface} eee off
