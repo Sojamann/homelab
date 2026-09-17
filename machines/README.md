@@ -50,6 +50,8 @@ OS installed and ready to be used for it's function.
 
 This table is for people: it records what the hardware is and what it is for.
 `machine-config/inventory/hosts.yml` carries the machine-facing half for
-ansible, `network/unifi_dns.tf` carries the address again as an `A` record, and
-`guests/guest_nodes.tf` names the nodes that store guest disks. None of them
-generates the others, so a new machine gets added in each one that applies.
+ansible, `network/unifi_dns.tf` carries the address again as an `A` record,
+`guests/guest_nodes.tf` names the nodes that store guest disks, and
+`flux/infrastructure/configs/proxmox/scrape.yaml` lists it as a scrape target.
+None of them generates the others, so a new machine gets added in each one that
+applies.
