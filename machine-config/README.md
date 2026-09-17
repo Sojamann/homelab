@@ -47,6 +47,7 @@ the value.
 | Single-pool storage | `local` holds guest disks, ISOs, templates, backups and cloud-init snippets; an unused `local-lvm` is removed. The disk itself is never repartitioned -- see [machines](../machines/proxmox.md) |
 | ACME certificate | Proxmox's built-in client, DNS-01 via Cloudflare. **Proxmox owns renewal** -- nothing here watches it |
 | API user + token | The identity guests uses; secret captured into the vault |
+| Metrics exporters | `prometheus-node-exporter` from apt, `pve-exporter` from PyPI in `/opt/pve-exporter` -- Debian does not package it. Both bind the host address; the exporter's `PVEAuditor` token stays in `/etc/prometheus/pve.yml` on the host. Scraped from the cluster, see [flux/docs/monitoring.md](../flux/docs/monitoring.md) |
 
 Anything in `/etc/pve` is replicated cluster-wide, so those steps (ACME
 account, DNS plugin, API user/token) run **once**, against `cluster_primary`.

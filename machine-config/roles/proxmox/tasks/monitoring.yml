@@ -1,0 +1,143 @@
+---
+# Two exporters per host, scraped by the cluster's Prometheus -- see
+# flux/docs/monitoring.md. Both bind the host's Trusted address only.
+#
+# pve-exporter is not packaged in Debian, so it comes from PyPI into its own
+# venv. Its token never leaves the host: minted here, written to the config
+# file, and read by nothing else.
+
+- name: Install node-exporter and the venv module
+  ansible.builtin.apt:
+    name:
+      - prometheus-node-exporter
+      - python3-venv
+    state: present
+
+- name: Bind node-exporter to the host address
+  ansible.builtin.copy:
+    content: |
+      ARGS="--web.listen-address={{ ansible_host }}:9100"
+    dest: /etc/default/prometheus-node-exporter
+    mode: "0644"
+  notify: Restart node-exporter
+
+- name: Install the pve-exporter venv
+  ansible.builtin.pip:
+    name: prometheus-pve-exporter=={{ pve_exporter_version }}
+    virtualenv: /opt/pve-exporter
+    virtualenv_command: /usr/bin/python3 -m venv
+  notify: Restart pve-exporter
+
+- name: Create the exporter user
+  ansible.builtin.user:
+    name: pve-exporter
+    system: true
+    shell: /usr/sbin/nologin
+    home: /nonexistent
+    create_home: false
+
+- name: Create the config directory
+  ansible.builtin.file:
+    path: /etc/prometheus
+    state: directory
+    mode: "0755"
+
+# Read-only across the whole cluster: PVEAuditor is a built-in role.
+- name: Provision the exporter token
+  block:
+    - name: Check the config file
+      ansible.builtin.stat:
+        path: /etc/prometheus/pve.yml
+      register: pve_exporter_config
+
+    - name: List the exporter's API tokens
+      ansible.builtin.command: pveum user token list {{ pve_exporter_user }} --output-format json
+      register: pve_exporter_tokens
+      changed_when: false
+      failed_when: false
+
+    # Proxmox prints a token's secret once. A token we no longer hold the value
+    # for is only convergent by recreating it -- same as api_token.yml.
+    - name: Mint the token
+      when: >-
+        not pve_exporter_config.stat.exists
+        or pve_exporter_tokens.rc != 0
+        or pve_exporter_token_name not in
+           (pve_exporter_tokens.stdout | default('[]') | from_json | map(attribute='tokenid'))
+      block:
+        - name: Create the exporter user in Proxmox
+          ansible.builtin.command: pveum user add {{ pve_exporter_user }}
+          register: pve_exporter_user_add
+          changed_when: pve_exporter_user_add.rc == 0
+          failed_when: >-
+            pve_exporter_user_add.rc != 0
+            and 'already exists' not in pve_exporter_user_add.stderr
+
+        - name: Grant PVEAuditor
+          ansible.builtin.command: >-
+            pveum acl modify / --users {{ pve_exporter_user }} --roles PVEAuditor
+          changed_when: false
+
+        - name: Remove the orphaned token
+          ansible.builtin.command: >-
+            pveum user token remove {{ pve_exporter_user }} {{ pve_exporter_token_name }}
+          when: >-
+            pve_exporter_tokens.rc == 0
+            and pve_exporter_token_name in
+                (pve_exporter_tokens.stdout | from_json | map(attribute='tokenid'))
+          changed_when: true
+
+        - name: Create the token
+          ansible.builtin.command: >-
+            pveum user token add {{ pve_exporter_user }} {{ pve_exporter_token_name }}
+            --privsep 0 --output-format json
+          register: pve_exporter_new_token
+          changed_when: true
+          no_log: true
+
+        - name: Write the exporter config
+          ansible.builtin.copy:
+            content: |
+              default:
+                user: {{ pve_exporter_user }}
+                token_name: {{ pve_exporter_token_name }}
+                token_value: {{ (pve_exporter_new_token.stdout | from_json)['value'] }}
+                verify_ssl: false
+            dest: /etc/prometheus/pve.yml
+            owner: pve-exporter
+            group: root
+            mode: "0600"
+          no_log: true
+          notify: Restart pve-exporter
+
+# The token is per host and the API is local, so the exporter talks to
+# 127.0.0.1 -- which no certificate covers, hence verify_ssl off above.
+- name: Install the pve-exporter unit
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      Description=Proxmox VE Exporter
+      After=network-online.target
+
+      [Service]
+      User=pve-exporter
+      ExecStart=/opt/pve-exporter/bin/pve_exporter \
+        --config.file /etc/prometheus/pve.yml \
+        --web.listen-address {{ ansible_host }}:9221
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/pve-exporter.service
+    mode: "0644"
+  notify: Restart pve-exporter
+
+- name: Enable the exporters
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - prometheus-node-exporter
+    - pve-exporter

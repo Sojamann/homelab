@@ -7,3 +7,14 @@
   ansible.builtin.systemd_service:
     name: pveproxy
     state: restarted
+
+- name: Restart node-exporter
+  ansible.builtin.systemd_service:
+    name: prometheus-node-exporter
+    state: restarted
+
+- name: Restart pve-exporter
+  ansible.builtin.systemd_service:
+    name: pve-exporter
+    state: restarted
+    daemon_reload: true

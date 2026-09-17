@@ -33,6 +33,37 @@ resource "unifi_firewall_zone_policy" "nvmeof_deny" {
 }
 
 
+# node-exporter and pve-exporter, installed by machine-config. One group so
+# the scrape is a single policy: the provider takes one port per policy.
+resource "unifi_firewall_group" "exporter_ports" {
+  name    = "exporter-ports"
+  type    = "port-group"
+  members = ["9100", "9221"]
+}
+
+
+# The one exception to the deny below. Prometheus runs in k8s and the Proxmox
+# hosts are on Trusted, so scraping them crosses the zone pair -- narrow to
+# those addresses and those two read-only ports.
+resource "unifi_firewall_zone_policy" "metrics_allow" {
+  name        = "metrics-allow-proxmox"
+  description = "k8s Prometheus may scrape the Proxmox exporters"
+  action      = "ALLOW"
+  protocol    = "tcp"
+
+  source = {
+    zone_id     = data.unifi_firewall_zone.internal.id
+    network_ids = [unifi_network.this["k8s"].id]
+  }
+
+  destination = {
+    zone_id       = data.unifi_firewall_zone.internal.id
+    ips           = [for name in local.proxmox_hosts : local.dns_records[name]]
+    port_group_id = unifi_firewall_group.exporter_ports.id
+  }
+}
+
+
 # Everything from k8s into the rest of the lab. Internet egress is a
 # different zone pair and is unaffected -- images and updates keep working.
 resource "unifi_firewall_zone_policy" "k8s_deny" {
@@ -89,8 +120,10 @@ resource "unifi_firewall_zone_policy_order" "internal" {
   source_zone_id      = data.unifi_firewall_zone.internal.id
   destination_zone_id = data.unifi_firewall_zone.internal.id
 
+  # The allow has to precede k8s_deny, which would otherwise match first.
   before_predefined_ids = [
     unifi_firewall_zone_policy.nvmeof_deny.id,
+    unifi_firewall_zone_policy.metrics_allow.id,
     unifi_firewall_zone_policy.k8s_deny.id,
   ]
 }

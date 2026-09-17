@@ -30,6 +30,9 @@
   ansible.builtin.import_tasks: api_token.yml
   when: inventory_hostname == cluster_primary
 
+- name: Install the metrics exporters
+  ansible.builtin.import_tasks: monitoring.yml
+
 - name: Mark this host as initialised
   ansible.builtin.file:
     path: /etc/lab/.stage1-initialized

@@ -40,6 +40,12 @@ pve_api_role_privs: >-
   VM.GuestAgent.Unrestricted VM.Migrate VM.PowerMgmt VM.Replicate VM.Snapshot
   VM.Snapshot.Rollback
 
+# Identity the exporter reads the API as -- PVEAuditor, read-only. Not packaged
+# in Debian, so the version is pinned here and installed from PyPI.
+pve_exporter_user: pve-exporter@pve
+pve_exporter_token_name: monitoring
+pve_exporter_version: 3.10.0
+
 # The single datastore every guest lands on. `snippets` is what the terraform
 # provider writes cloud-init configuration into; `import` is where it puts disk
 # images a guest is built from, and is the one content type Proxmox does not

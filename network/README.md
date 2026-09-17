@@ -88,17 +88,20 @@ on it.
 The k8s network runs arbitrary containers pulled from the internet, and Trusted
 holds the NAS and every Proxmox management interface. It is the one place in
 this lab where the permissive option is actually dangerous, and the list of
-things it legitimately needs is now empty:
+things it legitimately needs is one line long:
 
-| From            | To              | Port | Why             |
-|-----------------|-----------------|------|-----------------|
-| `10.212.4.0/24` | internet        | any  | images, updates |
-| `10.212.4.0/24` | anything else   | --   | denied          |
+| From            | To              | Port        | Why             |
+|-----------------|-----------------|-------------|-----------------|
+| `10.212.4.0/24` | internet        | any         | images, updates |
+| `10.212.4.0/24` | Proxmox hosts   | 9100, 9221  | Prometheus scrapes the exporters -- `metrics-allow-proxmox`, ordered above the deny |
+| `10.212.4.0/24` | anything else   | --          | denied          |
 
 The two allows that used to be here, 4420 and 443 to the NAS, are gone: the NAS
-has an interface in this network, so storage never crosses the zone pair. Keep
-the list empty -- if it turns painful the fix is one narrow allow, not
-abandoning the policy.
+has an interface in this network, so storage never crosses the zone pair. The
+scrape cannot be arranged away the same fashion -- the hosts have no interface
+in k8s -- so it is a narrow allow rather than an abandoned policy: named
+addresses, two read-only ports, and the exporters bind the Trusted address
+only. Keep the list this short.
 
 The NAS being in here is the cost. NVMe-oF has no authentication and
 `nvme connect` no TLS, so reaching `10.212.4.150:4420` is enough to attach a

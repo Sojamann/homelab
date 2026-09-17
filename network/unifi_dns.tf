@@ -24,6 +24,10 @@ locals {
     iapetus : "10.212.2.155",
     dione : "10.212.2.156",
   }
+
+  # The machines running Proxmox, as opposed to the NAS. Only the firewall
+  # needs the distinction -- see unifi_firewall.tf.
+  proxmox_hosts = ["titan", "enceladus", "mimas", "rhea", "iapetus", "dione"]
 }
 
 resource "unifi_dns_record" "machines" {
