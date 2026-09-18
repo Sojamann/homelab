@@ -30,3 +30,20 @@ variable "truenas_api_key" {
   type        = string
   sensitive   = true
 }
+
+variable "telegram_bot_token" {
+  description = "Telegram bot Alertmanager posts alerts as"
+  type        = string
+  sensitive   = true
+}
+
+variable "telegram_chat_id" {
+  description = "Telegram group the bot posts into -- negative for a group"
+  type        = string
+}
+
+variable "heartbeat_url" {
+  description = "Heartbeat URL the `Watchdog` alert pings -- whoever hosts it"
+  type        = string
+  sensitive   = true
+}

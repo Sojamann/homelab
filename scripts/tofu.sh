@@ -79,8 +79,8 @@ case "$layer" in
     export TF_VAR_terraform_state_passphrase
     ;;
   platform)
-    # Two, and neither is Proxmox or UniFi: this layer talks to the cluster and
-    # to the NAS, and to nothing else in the lab.
+    # Neither Proxmox nor UniFi: this layer talks to the cluster and to the
+    # NAS, and to nothing else in the lab.
 
     # Its state is committed, encrypted -- not because anything here exists
     # only in state, but because the TrueNAS key below ends up in it.
@@ -100,6 +100,14 @@ case "$layer" in
 
     TF_VAR_acme_email="$(vault_require secrets/vault.yml acme_email)"
     export TF_VAR_acme_email
+
+    # Alertmanager's receivers, written into OpenBao and `cluster-vars` for the
+    # apps repo -- which is public and may hold neither.
+    for key in telegram_bot_token telegram_chat_id heartbeat_url; do
+      value="$(vault_require secrets/vault.yml "$key")"
+      export "TF_VAR_$key=$value"
+    done
+    unset value
 
     # OpenBao is the exception to everything above: this layer does not only
     # write it into the cluster, it configures it over its own API. That needs

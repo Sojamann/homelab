@@ -1,0 +1,10 @@
+(C) 2026-09-16 Soak-test Realtek RTL8156B USB 2.5GbE dongle in Titan before trusting it: point-to-point iperf3 for hours, watch journalctl -k r8152 and ethtool -S for resets; one reset = no VLAN 40 (NVMe/TCP flap causes IO errors/ro remounts); blocked on a free ethernet port; only pays off against a 2.5G switch port +machines +investigation +perf @titan
+x 2026-09-18 2026-09-17 deploy and configure ntfy for alerting -- dropped: on iOS a self-hosted ntfy still needs ntfy.sh upstream, and delivers less than telegram for more pri:A
+x 2026-09-18 2026-09-17 alertmanager -> telegram, watchdog -> cronitor pri:A
+(B) 2026-09-17 setup proxmox backups +backup
+(C) 2026-09-17 setup off-site @nas +backups
+(B) 2026-09-17 setup flux manged image +updates including alerting
+(B) 2026-09-17 setup platform/ managed image +updates including alerting
+(C) 2026-09-17 setup @talos +updates including alerting
+(C) 2026-09-17 setup @nas +updates including alerting
+(A) 2026-09-17 setup alerting for @grafana note:projects/tuxedo-tasks/setup-alerting-for.md
