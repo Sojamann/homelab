@@ -8,6 +8,8 @@ kubectl = "1.36"
 KUBECONFIG = "{{ config_root }}/secrets/kubeconfig"
 TALOSCONFIG = "{{ config_root }}/secrets/talosconfig"
 
+TODO_DIR = "{{ config_root }}" # for tuxedo
+
 [tasks.save]
 description = "Commit the staged changes here plus whatever is dirty in flux/ and secrets/"
 run = "./scripts/save.sh"
