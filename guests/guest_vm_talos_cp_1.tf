@@ -27,7 +27,7 @@ resource "proxmox_virtual_environment_vm" "talos_cp_1" {
   }
 
   memory {
-    dedicated = 16384 # 16 GB
+    dedicated = 23096 # 16 GB
     floating  = 0
   }
 
