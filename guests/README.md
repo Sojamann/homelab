@@ -2,9 +2,10 @@
 
 Terraform (OpenTofu) owns what runs *on* the hosts; [machine-config](../machine-config/README.md)
 owns the hosts themselves. This layer builds the core infrastructure guests --
-netbird first, then the Talos nodes, then pihole.
+netbird first, then the Talos nodes, then Home Assistant.
 
-It stops at the VM. A Talos guest boots into maintenance mode with an address
+It stops at the VM -- for Home Assistant it stops rather earlier than that;
+see the trade-offs. A Talos guest boots into maintenance mode with an address
 and no configuration; [cluster](../cluster/README.md) turns it into a cluster
 member. No cluster secret is written here.
 
@@ -64,6 +65,7 @@ ssh -i secrets/guests-ssh-key ubuntu@netbird.lab.<domain>
 | ID   | IP           | DNS                     | Purpose                   |
 |------|--------------|-------------------------|---------------------------|
 | 160  | 10.212.2.160 | netbird.lab.<domain>    | netbird router            |
+| 161  | 10.212.2.161 | ha.lab.<domain>         | Home Assistant OS         |
 | 4010 | 10.212.4.10  | talos-cp-1.lab.<domain> | k8s control plane, VLAN 40 |
 
 
@@ -85,6 +87,8 @@ ssh -i secrets/guests-ssh-key ubuntu@netbird.lab.<domain>
   `talos-controlplane` or `talos-worker` is how the cluster layer finds its
   nodes -- it does not keep a list. Mistyping a tag produces a VM that no
   cluster ever configures, and no error anywhere.
+- **Home Assistant is an appliance, and the exception to most of this.** It is
+  configured by hand afterwards since no cloud-init mechanism exists.
 - **Every image is downloaded to every node.** `local` is cluster-wide in name
   but per-node in content, and a guest can only boot from an image its own node
   holds -- so the downloads are keyed `<node>/<image>`. Wasted disk on nodes
