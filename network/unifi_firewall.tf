@@ -64,6 +64,37 @@ resource "unifi_firewall_zone_policy" "metrics_allow" {
 }
 
 
+# The second exception, and deliberately not part of `exporter_ports`: 8123 is
+# Home Assistant's whole listener -- REST API, websocket and login share it
+# with `/api/prometheus`. A port group named for exporters would imply a
+# read-only port, so this gets its own policy and its own address.
+#
+# The token is what actually guards it; the narrowness here only limits who may
+# knock. The scrape filters down to Home Assistant's own health metrics, which
+# is what this hole is justified by -- see flux/infrastructure/configs/ha.
+resource "unifi_firewall_zone_policy" "ha_metrics_allow" {
+  name        = "metrics-allow-home-assistant"
+  description = "k8s Prometheus may scrape Home Assistant"
+  action      = "ALLOW"
+  protocol    = "tcp"
+
+  source = {
+    zone_id     = data.unifi_firewall_zone.internal.id
+    network_ids = [unifi_network.this["k8s"].id]
+  }
+
+  destination = {
+    zone_id = data.unifi_firewall_zone.internal.id
+
+    # The guest's, like the `app.` wildcard is cluster's: the address and its
+    # record live in guests/guest_vm_home_assistant.tf, and this layer cannot
+    # read them. Changing it there means changing it here.
+    ips  = ["10.212.2.161"]
+    port = 8123
+  }
+}
+
+
 # Everything from k8s into the rest of the lab. Internet egress is a
 # different zone pair and is unaffected -- images and updates keep working.
 resource "unifi_firewall_zone_policy" "k8s_deny" {
@@ -120,10 +151,11 @@ resource "unifi_firewall_zone_policy_order" "internal" {
   source_zone_id      = data.unifi_firewall_zone.internal.id
   destination_zone_id = data.unifi_firewall_zone.internal.id
 
-  # The allow has to precede k8s_deny, which would otherwise match first.
+  # The allows have to precede k8s_deny, which would otherwise match first.
   before_predefined_ids = [
     unifi_firewall_zone_policy.nvmeof_deny.id,
     unifi_firewall_zone_policy.metrics_allow.id,
+    unifi_firewall_zone_policy.ha_metrics_allow.id,
     unifi_firewall_zone_policy.k8s_deny.id,
   ]
 }

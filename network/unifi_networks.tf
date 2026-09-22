@@ -2,7 +2,7 @@ locals {
   networks = {
     Guest      = { purpose = "corporate", cidr = "10.212.0.0/24", vlan = null, dhcp_start = "10.212.0.6", dhcp_stop = "10.212.0.254", isolate = false, ipv6_ra = true }
     Management = { purpose = "corporate", cidr = "10.212.1.0/24", vlan = 10, dhcp_start = "10.212.1.6", dhcp_stop = "10.212.1.254", isolate = false, ipv6_ra = false }
-    Trusted    = { purpose = "corporate", cidr = "10.212.2.0/24", vlan = 20, dhcp_start = "10.212.2.6", dhcp_stop = "10.212.2.149", isolate = false, ipv6_ra = false }
+    Trusted    = { purpose = "corporate", cidr = "10.212.2.0/24", vlan = 20, dhcp_start = "10.212.2.6", dhcp_stop = "10.212.2.149", isolate = false, ipv6_ra = true }
     IoT        = { purpose = "corporate", cidr = "10.212.3.0/24", vlan = 30, dhcp_start = "10.212.3.6", dhcp_stop = "10.212.3.254", isolate = true, ipv6_ra = false }
     k8s        = { purpose = "corporate", cidr = "10.212.4.0/24", vlan = 40, dhcp_start = "10.212.4.100", dhcp_stop = "10.212.4.149", isolate = false, ipv6_ra = false }
   }
@@ -21,7 +21,10 @@ resource "unifi_network" "this" {
   network_isolation_enabled = each.value.isolate
 
   # SLAAC. Only where something actually wants IPv6; elsewhere it advertises a
-  # prefix nothing is listening for.
+  # prefix nothing is listening for. Trusted wants it because Matter over
+  # Thread is IPv6-only -- the route into the mesh comes from the border
+  # router's own advertisements, so this only supplies addresses on the link
+  # the two share.
   ipv6_ra_enable = each.value.ipv6_ra
 
   # Bonjour/Avahi. On by default on the controller, off by default in the

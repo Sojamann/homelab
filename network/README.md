@@ -33,9 +33,7 @@ crossing anything: same network, which is why no allow appears here at all.
   is worth one wasted number. It is `.150` in `k8s` too, on a second interface
 - physical homelab equipment uses `.151-.159`, statically assigned and
   deliberately outside the DHCP pool -- which is why that pool stops at `.149`
-- permanent, statically addressed guests -- VMs and containers alike -- use
-  `.160+`; `netbird` is the first of them at `.160`, and pihole will take the
-  next free number
+- permanent, statically addressed guests -- VMs and containers alike use `.160+`
 - everything else is a normal DHCP client
 
 The `k8s` network is laid out differently, because nothing in it is a person's
@@ -88,12 +86,13 @@ on it.
 The k8s network runs arbitrary containers pulled from the internet, and Trusted
 holds the NAS and every Proxmox management interface. It is the one place in
 this lab where the permissive option is actually dangerous, and the list of
-things it legitimately needs is one line long:
+things it legitimately needs is two lines long:
 
 | From            | To              | Port        | Why             |
 |-----------------|-----------------|-------------|-----------------|
 | `10.212.4.0/24` | internet        | any         | images, updates |
 | `10.212.4.0/24` | Proxmox hosts   | 9100, 9221  | Prometheus scrapes the exporters -- `metrics-allow-proxmox`, ordered above the deny |
+| `10.212.4.0/24` | `10.212.2.161`  | 8123        | Prometheus scrapes Home Assistant -- `metrics-allow-home-assistant`, ordered above the deny |
 | `10.212.4.0/24` | anything else   | --          | denied          |
 
 The two allows that used to be here, 4420 and 443 to the NAS, are gone: the NAS
