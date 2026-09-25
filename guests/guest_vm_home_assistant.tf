@@ -44,7 +44,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   }
 
   memory {
-    dedicated = 4096
+    dedicated = 6144
   }
 
   scsi_hardware = "virtio-scsi-single"
