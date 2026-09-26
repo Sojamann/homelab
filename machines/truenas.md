@@ -106,7 +106,7 @@ Rules:
 ```
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
-├── pbs-backups/     PBS datastore
+├── pbs-backups      PBS datastore -- a *zvol*, not a dataset (iSCSI)
 ├── node-exporter/   textfile metrics, see Monitoring
 ├── users/<name>/files/          the SMB share root
 └── users/<name>/time-machine/   (optional) one Mac
@@ -131,7 +131,7 @@ by hand, and every `bulk` volume lives within it.
 | Dataset                     | recordsize | compr | Snapshots         | Share / consumer        |
 |-----------------------------|------------|-------|-------------------|-------------------------|
 | `k8s-csi`                   | 128K       | lz4   | hourly (24h retention) + daily (30d retention), **not** recursive | NFS, the `bulk` StorageClass |
-| `pbs-backups`               | 1M         | lz4   | daily, **3d**     | PBS                     |
+| `pbs-backups` (zvol)        | 64K†       | lz4   | daily, **3d**     | iSCSI, PBS              |
 | `node-exporter`             | 128K       | lz4   | **none**          | node-exporter app (ro)  |
 | `users`                     | 128K       | zstd  | hourly (24h retention) + daily (30d retention), recursive, exclude `users/*/time-machine` | -- (children only) |
 | `users/<name>`              | 128K       | zstd  | via `users` task  | -- (children only)      |
@@ -149,7 +149,9 @@ One recursive task on `slow/users` covers every user, current and future --
 no per-user task. Recursive means one snapshot **per dataset** (same name,
 atomic), not one snapshot of the tree: each user rolls back and browses
 `.zfs/snapshot` independently.
-- `pbs-backups` -- same trap: snapshots pin chunks PBS GC wants to free.
+- `pbs-backups` -- same trap: snapshots pin chunks PBS GC wants to free. And
+  a snapshot of a zvol is block-level, so it is a rollback and nothing else --
+  there is no `.zfs/snapshot` to browse and no way to pull one backup out of it.
 - `node-exporter` -- rewritten every minute, nothing worth keeping.
 - `k8s-csi` -- not recursive: the PVs under it are directories, not datasets,
   so one task on the one dataset is already every volume. And `lz4`, not the
@@ -194,6 +196,7 @@ in *System* -> *General* -> *GUI*, the rest on each service:
 | SSH     | `10.212.2.150`                        | same                         |
 | NVMe-oF | `10.212.4.150`                        | the cluster, nothing else    |
 | NFS     | `10.212.4.150`                        | the cluster, nothing else    |
+| iSCSI   | `10.212.2.150`                        | PBS, which is on Trusted     |
 | node-exporter | `10.212.4.150:9100`             | Prometheus, see [Monitoring](#monitoring) |
 
 The UI is the uncomfortable row: TrueNAS serves it and the API on one listener
@@ -224,7 +227,18 @@ not new. What scopes it is the dedicated user and that the key is revocable.
   curl -sH "Authorization: Bearer $TRUENAS_API_KEY" \
     https://nas.lab.<domain>/api/v2.0/nvmet/port
   ```
-- needs TrueNAS **25.10+**. iSCSI stays off.
+- needs TrueNAS **25.10+**. iSCSI is on, but only for PBS -- see below.
+
+**iSCSI** -- one target, one extent, one consumer: the PBS datastore. On for no
+other reason, and the second block protocol on this box because PBS cannot use
+NVMe-oF.
+- portal on `10.212.2.150` only, and an initiator group holding PBS's IQN
+  (`/etc/iscsi/initiatorname.iscsi` on the guest) and nothing else. **No CHAP**
+  -- those two together are the whole access control, the same shape as NVMe-oF
+- extent type **Device**, pointed at the `slow/pbs-backups` zvol. Logical block
+  size **4096**
+- thick, not sparse
+- never mount this LUN from anything but PBS.
 
 **SMB** -- one share per `users/<name>/files`.
 - leave the **share ACL at default** -- effective access is the intersection of
@@ -234,10 +248,7 @@ not new. What scopes it is the dedicated user and that the key is revocable.
 - Access Based Share Enumeration **on**, Browsable **on**
 - Read Only off, Hosts Allow/Deny empty, Apple encoding off, Audit off
 
-**NFS** -- one export, and only ever one: the share csi-driver-nfs subdivides.
-
-- service bound to `10.212.4.150` only, same half of the access control as
-  NVMe-oF
+**NFS** -- export for CSI driver and PBS
 - **NFSv4 on**, v3 ownership model off -- v4 is what the driver mounts
   (`nfsvers=4.1`), and v3 would be a second, weaker way in
 

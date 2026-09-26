@@ -59,6 +59,20 @@ locals {
       decompression_algorithm = "zst"
       overwrite               = false
     }
+
+    # Proxmox Backup Server install media. `iso` because it is exactly that --
+    # unlike every other entry here it never becomes a disk: PBS ships no
+    # cloud image, so the guest boots this once and installs itself onto an
+    # empty disk. See guest_vm_pbs.tf.
+    "pbs" = {
+      content_type            = "iso"
+      url                     = "https://enterprise.proxmox.com/iso/proxmox-backup-server_4.2-1.iso"
+      file_name               = "proxmox-backup-server_4.2-1.iso"
+      checksum                = "2fb299deac3929253712c9c3dfc9237edbe70af83c8848467616b771a1d5453e"
+      checksum_algorithm      = "sha256"
+      decompression_algorithm = null
+      overwrite               = true
+    }
   }
 }
 

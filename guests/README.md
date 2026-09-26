@@ -1,8 +1,7 @@
 # Guests
 
 Terraform (OpenTofu) owns what runs *on* the hosts; [machine-config](../machine-config/README.md)
-owns the hosts themselves. This layer builds the core infrastructure guests --
-netbird first, then the Talos nodes, then Home Assistant.
+owns the hosts themselves. This layer builds the core infrastructure guests.
 
 It stops at the VM -- for Home Assistant it stops rather earlier than that;
 see the trade-offs. A Talos guest boots into maintenance mode with an address
@@ -66,6 +65,7 @@ ssh -i secrets/guests-ssh-key ubuntu@netbird.lab.<domain>
 |------|--------------|-------------------------|---------------------------|
 | 160  | 10.212.2.160 | netbird.lab.<domain>    | netbird router            |
 | 161  | 10.212.2.161 | ha.lab.<domain>         | Home Assistant OS         |
+| 162  | 10.212.2.162 | pbs.lab.<domain>        | Proxmox Backup Server     |
 | 4010 | 10.212.4.10  | talos-cp-1.lab.<domain> | k8s control plane, VLAN 40 |
 
 
@@ -89,8 +89,37 @@ ssh -i secrets/guests-ssh-key ubuntu@netbird.lab.<domain>
   cluster ever configures, and no error anywhere.
 - **Home Assistant is an appliance, and the exception to most of this.** It is
   configured by hand afterwards since no cloud-init mechanism exists.
+- **PBS is installed by hand, and deliberately so.** It ships no cloud image,
+  so this layer attaches the ISO to an empty disk and stops.
 - **Every image is downloaded to every node.** `local` is cluster-wide in name
   but per-node in content, and a guest can only boot from an image its own node
   holds -- so the downloads are keyed `<node>/<image>`. Wasted disk on nodes
   that never use an image, in exchange for placing a guest anywhere without
   waiting on a download.
+
+## Backups
+
+1. **Install.** Console on VM 162: address `10.212.2.162/24`, gateway
+   `10.212.2.1`, hostname `pbs.lab.<domain>`. 20G is the operating system and
+   nothing else; the backups live on the NAS.
+2. **Datastore.** The `slow/pbs-backups` zvol reaches PBS over iSCSI -- see
+   [machines/truenas.md](../machines/truenas.md) for the NAS half. Create
+   the datastore in PBS on the mounted iSCSI drive.
+4. **Token.** User `backup@pbs`, token `backup@pbs!lab`, permission
+   **DatastoreBackup** on `/datastore/pbs`
+5. **Storage entry.** *Datacenter* -> *Storage* -> *Add* -> *Proxmox Backup
+   Server*, once for the whole cluster.
+6. **Job.** *Datacenter* -> *Backup*, mode *snapshot*, notify on failure,
+   fleecing on if guest disks sit on slow storage.
+   **Exclude VM 162 from the job**: it cannot restore itself, and it would be
+   backing up its own chunk store.
+
+Schedules, and the order is the point -- prune has to run after the backup it
+should count, and GC is the expensive one:
+
+| Job    | Where            | Schedule                        |
+|--------|------------------|---------------------------------|
+| Backup | PVE, *Backup*    | `23:00` daily                   |
+| Prune  | PBS, on the datastore | `04:00` daily              |
+| GC     | PBS, on the datastore | `sun 05:00` weekly         |
+| Verify | PBS, on the datastore | `sat 22:00` weekly, skip verified |
