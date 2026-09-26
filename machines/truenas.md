@@ -75,7 +75,7 @@ Infos:
   never by widening one
 - mirror `fast` later with `zpool attach` / UI *Extend*, **never** `zpool add`
 - ~4TB usable on `slow`, stay under 80% -> ~3.2TB
-- no quotas, no reservations, except `time-machine`
+- no quotas, no reservations, except `time-machine` and `ha-backups`
 
 Scrub tasks -- both pools, *Data Protection* -> *Scrub Tasks*:
 
@@ -92,6 +92,8 @@ three drives.
 All local, no directory service. Created and removed by hand.
 
 - `admin` -- daily driver for UI and shell, in `builtin_administrators`
+- `ha-backup` -- service account for `slow/ha-backups`, own group, `nologin`,
+  no home dataset, not in `builtin_administrators`
 - one user per person, each in its **own dedicated group**
 - the user, the group, the `slow/users/<name>` dataset and the SMB share are
   one unit -- same name, created together
@@ -107,6 +109,7 @@ Rules:
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
 ├── pbs-backups      PBS datastore -- a *zvol*, not a dataset (iSCSI)
+├── ha-backups/      Home Assistant's own backups, over SMB
 ├── node-exporter/   textfile metrics, see Monitoring
 ├── users/<name>/files/          the SMB share root
 └── users/<name>/time-machine/   (optional) one Mac
@@ -132,6 +135,7 @@ by hand, and every `bulk` volume lives within it.
 |-----------------------------|------------|-------|-------------------|-------------------------|
 | `k8s-csi`                   | 128K       | lz4   | hourly (24h retention) + daily (30d retention), **not** recursive | NFS, the `bulk` StorageClass |
 | `pbs-backups` (zvol)        | 64K†       | lz4   | daily, **3d**     | iSCSI, PBS              |
+| `ha-backups`                | 1M         | lz4   | daily, **14d**    | SMB, Home Assistant     |
 | `node-exporter`             | 128K       | lz4   | **none**          | node-exporter app (ro)  |
 | `users`                     | 128K       | zstd  | hourly (24h retention) + daily (30d retention), recursive, exclude `users/*/time-machine` | -- (children only) |
 | `users/<name>`              | 128K       | zstd  | via `users` task  | -- (children only)      |
@@ -153,6 +157,8 @@ atomic), not one snapshot of the tree: each user rolls back and browses
   a snapshot of a zvol is block-level, so it is a rollback and nothing else --
   there is no `.zfs/snapshot` to browse and no way to pull one backup out of it.
 - `node-exporter` -- rewritten every minute, nothing worth keeping.
+- `ha-backups` -- 1M because a backup is one multi-GB tar written straight
+  through, and `lz4` is a near no-op on it.
 - `k8s-csi` -- not recursive: the PVs under it are directories, not datasets,
   so one task on the one dataset is already every volume. And `lz4`, not the
   `zstd` the user datasets take -- PDFs and images are compressed already.
@@ -182,6 +188,11 @@ ACLs -- both `users` levels created with the **SMB preset**:
 The parent's `everyone@ Traverse` lets users walk through without `ls`; the
 child has no `everyone@` at all, so the walk stops there. A new child dataset
 does **not** inherit the parent ACL -- set it on `files` explicitly and verify.
+
+`ha-backups` takes the same shape one level up: SMB preset, owner
+`ha-backup:ha-backup`, `owner@` and `builtin_administrators` Full Control, no
+`everyone@`. The user, the group, the dataset and the share are one unit here
+too -- it is just not a person.
 
 ## Shares and Services
 
@@ -240,7 +251,7 @@ NVMe-oF.
 - thick, not sparse
 - never mount this LUN from anything but PBS.
 
-**SMB** -- one share per `users/<name>/files`.
+**SMB** -- one share per `users/<name>/files`, plus `ha-backups`.
 - leave the **share ACL at default** -- effective access is the intersection of
   share and filesystem ACL; the dataset stays the single source of truth
 - Purpose: **default share parameters**, except `time-machine`, which takes the
@@ -351,8 +362,13 @@ Pool state comes from node-exporter itself; SMART is not exported.
 1. **ZFS snapshots** -- undo, same pool. Survives a mistake and nothing else.
 2. **PBS on `slow/pbs-backups`** -- per-VM, per-file restore. Survives a dead
    guest, node or NVMe. The PBS VM itself lives on node-local `local`.
-3. **Offsite (B2)** -- survives losing the NAS. **Not built.** `users/` goes
+3. **Home Assistant's own backups on `slow/ha-backups`** -- application-level,
+   and the reason for a second copy of one guest: PBS restores the VM, this
+   restores a configuration into a Home Assistant that is already running, and
+   it is the layer that survives PBS. Scheduled and encrypted inside the
+   appliance, not here.
+4. **Offsite (B2)** -- survives losing the NAS. **Not built.** `users/` goes
    first when it is.
 
-Until 2 exists, `fast` has no restore path. Until 3 exists, one fire takes the
+Until 2 exists, `fast` has no restore path. Until 4 exists, one fire takes the
 guests and every backup of them.
