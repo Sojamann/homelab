@@ -47,3 +47,9 @@ variable "heartbeat_url" {
   type        = string
   sensitive   = true
 }
+
+variable "kassenbuch_password_hash" {
+  description = "Kassenbuch login, base64 argon2id hash from scripts/hash-password.js"
+  type        = string
+  sensitive   = true
+}

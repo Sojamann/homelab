@@ -109,6 +109,11 @@ case "$layer" in
     done
     unset value
 
+    # Kassenbuch's login, as the argon2 hash the app reads -- the plaintext
+    # lives in a password manager, nowhere in the lab.
+    TF_VAR_kassenbuch_password_hash="$(vault_require secrets/vault.yml kassenbuch_password_hash)"
+    export TF_VAR_kassenbuch_password_hash
+
     # OpenBao is the exception to everything above: this layer does not only
     # write it into the cluster, it configures it over its own API. That needs
     # a route from here to a ClusterIP service, and a port-forward is the only

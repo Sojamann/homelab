@@ -43,9 +43,9 @@ Arguments are forwarded to `tofu`. `init` runs automatically on first use.
 
 Read out of the ansible vault by `scripts/tofu.sh` and exported. None is
 Proxmox or UniFi -- this layer talks to the cluster, to the NAS and to OpenBao,
-and to nothing else in the lab. The last three it only carries: they are
-written into OpenBao and `cluster-vars` for Alertmanager, and nothing here
-dials them.
+and to nothing else in the lab. The last four it only carries: they are
+written into OpenBao and `cluster-vars` for Alertmanager and Kassenbuch, and
+nothing here dials them.
 
 | Variable                            | Source              | For                          |
 |-------------------------------------|---------------------|------------------------------|
@@ -58,6 +58,7 @@ dials them.
 | `TF_VAR_telegram_bot_token`         | `secrets/vault.yml` | Alertmanager -> Telegram      |
 | `TF_VAR_telegram_chat_id`           | `secrets/vault.yml` | the group it posts into       |
 | `TF_VAR_heartbeat_url`              | `secrets/vault.yml` | the `Watchdog` heartbeat      |
+| `TF_VAR_kassenbuch_password_hash`  | `secrets/vault.yml` | Kassenbuch's login           |
 | `VAULT_TOKEN`                       | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
 
 > the terraform state is committed and encrypted.

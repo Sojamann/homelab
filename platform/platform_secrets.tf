@@ -50,3 +50,20 @@ resource "vault_kv_secret_v2" "alerting" {
     heartbeat-url = var.heartbeat_url
   })
 }
+
+####################################
+#            KASSENBUCH            #
+####################################
+
+# Only the hash: the app never needs the plaintext, and this repo never holds
+# it. Read as env, so a new hash takes effect on the next pod restart.
+resource "vault_kv_secret_v2" "kassenbuch" {
+  mount = vault_mount.kv.path
+  name  = "kassenbuch/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    password-hash = var.kassenbuch_password_hash
+  })
+}
