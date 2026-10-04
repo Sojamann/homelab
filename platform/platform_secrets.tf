@@ -56,7 +56,8 @@ resource "vault_kv_secret_v2" "alerting" {
 ####################################
 
 # Only the hash: the app never needs the plaintext, and this repo never holds
-# it. Read as env, so a new hash takes effect on the next pod restart.
+# it. The Verein's name rides along to keep it out of the public apps repo.
+# Both read as env, so a change takes effect on the next pod restart.
 resource "vault_kv_secret_v2" "kassenbuch" {
   mount = vault_mount.kv.path
   name  = "kassenbuch/app"
@@ -64,6 +65,7 @@ resource "vault_kv_secret_v2" "kassenbuch" {
   delete_all_versions = true
 
   data_json = jsonencode({
-    password-hash = var.kassenbuch_password_hash
+    password-hash    = var.kassenbuch_password_hash
+    association-name = var.kassenbuch_association_name
   })
 }

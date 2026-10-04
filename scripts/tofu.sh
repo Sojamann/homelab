@@ -114,6 +114,9 @@ case "$layer" in
     TF_VAR_kassenbuch_password_hash="$(vault_require secrets/vault.yml kassenbuch_password_hash)"
     export TF_VAR_kassenbuch_password_hash
 
+    TF_VAR_kassenbuch_association_name="$(vault_require secrets/vault.yml kassenbuch_association_name)"
+    export TF_VAR_kassenbuch_association_name
+
     # OpenBao is the exception to everything above: this layer does not only
     # write it into the cluster, it configures it over its own API. That needs
     # a route from here to a ClusterIP service, and a port-forward is the only

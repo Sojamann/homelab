@@ -48,6 +48,11 @@ variable "heartbeat_url" {
   sensitive   = true
 }
 
+variable "kassenbuch_association_name" {
+  description = "Kassenbuch's Verein, shown in the app as VEREIN"
+  type        = string
+}
+
 variable "kassenbuch_password_hash" {
   description = "Kassenbuch login, base64 argon2id hash from scripts/hash-password.js"
   type        = string

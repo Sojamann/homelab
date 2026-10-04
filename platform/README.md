@@ -58,7 +58,8 @@ nothing here dials them.
 | `TF_VAR_telegram_bot_token`         | `secrets/vault.yml` | Alertmanager -> Telegram      |
 | `TF_VAR_telegram_chat_id`           | `secrets/vault.yml` | the group it posts into       |
 | `TF_VAR_heartbeat_url`              | `secrets/vault.yml` | the `Watchdog` heartbeat      |
-| `TF_VAR_kassenbuch_password_hash`  | `secrets/vault.yml` | Kassenbuch's login           |
+| `TF_VAR_kassenbuch_password_hash`   | `secrets/vault.yml` | Kassenbuch's login           |
+| `TF_VAR_kassenbuch_association_name` | `secrets/vault.yml` | Kassenbuch's Verein name   |
 | `VAULT_TOKEN`                       | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
 
 > the terraform state is committed and encrypted.
