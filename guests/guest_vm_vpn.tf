@@ -3,21 +3,23 @@ locals {
   # statically addressed guests. Written into the guest by cloud-init, so this
   # is the address rather than a note about one someone typed: the DNS record,
   # the guest and this local cannot disagree.
-  netbird_ip = "10.212.2.160"
+  vpn_ip = "10.212.2.160"
 
   # Chosen, not discovered, so a rebuilt guest keeps its identity on the
   # network. `BC:24:11` is Proxmox's OUI, which keeps it clear of real
   # hardware; the last byte is the host part of the address, so guests stay
   # distinct from each other by construction.
-  netbird_mac = "BC:24:11:00:01:60"
+  vpn_mac = "BC:24:11:00:01:60"
 }
 
-resource "proxmox_virtual_environment_file" "netbird_cloud_init" {
+resource "proxmox_virtual_environment_file" "vpn_cloud_init" {
   node_name    = local.cluster_primary
   datastore_id = local.guest_datastore
   content_type = "snippets"
 
   source_raw {
+    # Still the old name: a new file would be a new `user_data_file_id`, and
+    # that is a replacement of the VM, not an update.
     file_name = "netbird-cloud-init.yaml"
 
     # The login lives here and not in `user_account`, because `cicustom
@@ -44,15 +46,16 @@ resource "proxmox_virtual_environment_file" "netbird_cloud_init" {
   }
 }
 
-resource "proxmox_virtual_environment_vm" "netbird" {
+resource "proxmox_virtual_environment_vm" "vpn" {
   node_name = local.cluster_primary
   vm_id     = 160
-  name      = "netbird"
-  tags      = ["terraform", "netbird"]
+  name      = "vpn"
+  tags      = ["terraform", "vpn"]
 
   description = <<-EOT
-    Managed by the guests layer. Ubuntu 24.04 from the cloud image; netbird
-    itself is installed by ansible.
+    Managed by the guests layer. Ubuntu 24.04 from the cloud image; the
+    tailscale subnet router and exit node, installed by hand -- see
+    guests/README.md.
   EOT
 
   operating_system { type = "l26" }
@@ -86,11 +89,11 @@ resource "proxmox_virtual_environment_vm" "netbird" {
 
     # This snippet becomes the guest's whole user-data -- see the comment on
     # the resource -- so the user and its key are defined there, not here.
-    user_data_file_id = proxmox_virtual_environment_file.netbird_cloud_init.id
+    user_data_file_id = proxmox_virtual_environment_file.vpn_cloud_init.id
 
     ip_config {
       ipv4 {
-        address = "${local.netbird_ip}/24"
+        address = "${local.vpn_ip}/24"
         gateway = "10.212.2.1"
       }
     }
@@ -104,7 +107,7 @@ resource "proxmox_virtual_environment_vm" "netbird" {
   network_device {
     bridge      = "vmbr0"
     model       = "virtio"
-    mac_address = local.netbird_mac
+    mac_address = local.vpn_mac
   }
 
   # Installed by the snippet above, so this holds create open until cloud-init
@@ -119,21 +122,31 @@ resource "proxmox_virtual_environment_vm" "netbird" {
   stop_on_destroy = true
 }
 
-resource "unifi_dns_record" "netbird" {
-  name   = "netbird.${var.lab_domain}"
+resource "unifi_dns_record" "vpn" {
+  name   = "vpn.${var.lab_domain}"
   type   = "A"
-  record = local.netbird_ip
+  record = local.vpn_ip
 
   ttl = 0 # auto
 }
 
-output "netbird" {
-  description = "The netbird peer, once ansible has installed netbird on it"
+output "vpn" {
+  description = "The tailscale subnet router, once tailscale is installed on it"
   value = {
     node  = local.cluster_primary
-    vm_id = proxmox_virtual_environment_vm.netbird.vm_id
-    ip    = local.netbird_ip
-    fqdn  = unifi_dns_record.netbird.name
-    ssh   = "ssh -i secrets/guests-ssh-key ubuntu@${unifi_dns_record.netbird.name}"
+    vm_id = proxmox_virtual_environment_vm.vpn.vm_id
+    ip    = local.vpn_ip
+    fqdn  = unifi_dns_record.vpn.name
+    ssh   = "ssh -i secrets/guests-ssh-key ubuntu@${unifi_dns_record.vpn.name}"
   }
+}
+
+moved {
+  from = proxmox_virtual_environment_file.netbird_cloud_init
+  to   = proxmox_virtual_environment_file.vpn_cloud_init
+}
+
+moved {
+  from = proxmox_virtual_environment_vm.netbird
+  to   = proxmox_virtual_environment_vm.vpn
 }

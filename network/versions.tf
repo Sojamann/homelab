@@ -38,5 +38,9 @@ terraform {
       source  = "filipowm/unifi"
       version = "~> 1.1"
     }
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "~> 0.29"
+    }
   }
 }

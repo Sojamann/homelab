@@ -32,10 +32,12 @@ case "$layer" in
   network)
     for key in terraform_state_passphrase unifi_api_key \
                wifi_trusted_ssid wifi_iot_ssid \
-               wifi_trusted_passphrase wifi_iot_passphrase; do
+               wifi_trusted_passphrase wifi_iot_passphrase \
+               tailscale_oauth_client_id tailscale_oauth_client_secret; do
       value="$(vault_require secrets/vault.yml "$key")"
       case "$key" in
         unifi_api_key) export UNIFI_API_KEY="$value" ;;
+        tailscale_*) export "$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')=$value" ;;
         *) export "TF_VAR_$key=$value" ;;
       esac
     done

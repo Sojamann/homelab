@@ -37,7 +37,7 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   }
 
   # Home Assistant is idle-bound, not CPU-bound -- nothing here resembles
-  # netbird's per-flow WireGuard argument for its cores.
+  # the vpn guest's per-flow WireGuard argument for its cores.
   cpu {
     cores = 2
     type  = "host"

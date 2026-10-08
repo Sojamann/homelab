@@ -56,14 +56,14 @@ cloud-init snippet authorises the public half; the private half is
 written to `secrets/guests-ssh-key` (0600, gitignored) for ansible and for you:
 
 ```sh
-ssh -i secrets/guests-ssh-key ubuntu@netbird.lab.<domain>
+ssh -i secrets/guests-ssh-key ubuntu@vpn.lab.<domain>
 ```
 
 ## Current contents
 
 | ID   | IP           | DNS                     | Purpose                   |
 |------|--------------|-------------------------|---------------------------|
-| 160  | 10.212.2.160 | netbird.lab.<domain>    | netbird router            |
+| 160  | 10.212.2.160 | vpn.lab.<domain>        | tailscale subnet router   |
 | 161  | 10.212.2.161 | ha.lab.<domain>         | Home Assistant OS         |
 | 162  | 10.212.2.162 | pbs.lab.<domain>        | Proxmox Backup Server     |
 | 4010 | 10.212.4.10  | talos-cp-1.lab.<domain> | k8s control plane, VLAN 40 |
@@ -78,7 +78,7 @@ ssh -i secrets/guests-ssh-key ubuntu@netbird.lab.<domain>
 
   Guests now live in two `/24`s, which the host octet alone cannot tell apart,
   so the third octet leads the id and takes byte five of the MAC:
-  `10.212.4.10` is VM `4010` and `BC:24:11:00:04:10`. netbird stays `160`,
+  `10.212.4.10` is VM `4010` and `BC:24:11:00:04:10`. vpn stays `160`,
   grandfathered. The cluster layer relies on this to read a Talos node's
   address back out of its vm id, which is the first time the convention is
   load-bearing rather than a convenience.
@@ -123,3 +123,40 @@ should count, and GC is the expensive one:
 | Prune  | PBS, on the datastore | `04:00` daily              |
 | GC     | PBS, on the datastore | `sun 05:00` weekly         |
 | Verify | PBS, on the datastore | `sat 22:00` weekly, skip verified |
+
+## VPN
+
+VM 160 is the tailscale subnet router and exit node. The tailnet's policy and
+DNS are the [network](../network/README.md#tailnet) layer's; the guest only
+joins it, by hand:
+
+1. **Auth key.** Admin console -> *Settings -> Keys*: one-off, pre-approved,
+   tag `tag:lab-router`. Tagged, so the node's key never expires; the routes
+   and the exit node approve themselves through the policy's `autoApprovers`.
+2. **Install and join** on the guest:
+
+   ```sh
+   sudo hostnamectl set-hostname vpn   # cloud-init set it once, from the old name
+   curl -fsSL https://tailscale.com/install.sh | sh
+   printf 'net.ipv4.ip_forward = 1\nnet.ipv6.conf.all.forwarding = 1\n' \
+     | sudo tee /etc/sysctl.d/99-tailscale.conf && sudo sysctl --system
+   sudo tailscale up --auth-key=tskey-auth-... \
+     --advertise-tags=tag:lab-router \
+     --advertise-routes=10.212.2.0/24,10.212.4.0/24 \
+     --advertise-exit-node \
+     --accept-dns=false
+   ```
+
+`--accept-dns=false` because the guest already resolves through the gateway,
+and split DNS would only point it back there. **Never add
+`--snat-subnet-routes=false`**: the SNAT to `10.212.2.160` is what lets
+`nvmeof-deny-cross-vlan` keep the tailnet off the NVMe-oF listener.
+
+```mermaid
+graph LR
+  C["tailnet client"] -->|WireGuard| VPN["vpn 10.212.2.160<br/>tag:lab-router"]
+  VPN -->|"SNAT, src 10.212.2.160"| T["Trusted 10.212.2.0/24"]
+  VPN -->|"SNAT, src 10.212.2.160"| K["k8s 10.212.4.0/24"]
+  K -.-x|"nvmeof-deny-cross-vlan"| N["10.212.4.150:4420"]
+  C -.->|"split DNS lab. / app."| R["10.212.2.1"]
+```

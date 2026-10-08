@@ -1,6 +1,6 @@
 # Network
 
-VLANs, DHCP pools, DNS records, firewall policy and wifi. Everything else
+VLANs, DHCP pools, DNS records, firewall policy, wifi, and the tailnet. Everything else
 assumes the network already looks like this, so it comes early -- a machine
 cannot take a static address in a VLAN that does not exist, and re-addressing
 it afterwards is a migration rather than a setting.
@@ -117,6 +117,22 @@ TrueNAS API, which shares a listener with the web UI, so the login page is
 reachable from k8s: an accepted trade, see
 [platform](../platform/README.md#known-trade-offs).
 
+## Tailnet
+
+Remote access is tailscale (SaaS). The router is a guest -- `vpn`, VM 160, see
+[guests](../guests/README.md#vpn) -- but what it may do is decided here:
+
+| What          | Value                                                  |
+|---------------|--------------------------------------------------------|
+| routes        | Trusted `10.212.2.0/24`, k8s `10.212.4.0/24`, auto-approved for `tag:lab-router` |
+| exit node     | `tag:lab-router`, auto-approved; off until a client picks it |
+| access        | every member to both routes, the internet via the exit node, and their own devices |
+| DNS           | MagicDNS on; split DNS sends `lab.` and `app.` to `10.212.2.1` |
+
+All of k8s being routed includes the NVMe-oF listener. It stays closed because
+the router SNATs to `10.212.2.160`, a Trusted address, which
+`nvmeof-deny-cross-vlan` blocks -- so SNAT on the router is load-bearing.
+
 ## What is here
 
 | File           | Contents                                              |
@@ -125,7 +141,9 @@ reachable from k8s: an accepted trade, see
 | `unifi_dns.tf`      | the address table, one `A` record per entry, and the `app.` wildcard |
 | `unifi_firewall.tf` | the k8s allow list, the default block, and their order |
 | `unifi_wifi.tf`     | the two SSIDs -- trusted and IoT, named from the vault |
-| `providers.tf`      | the controller URL                                  |
+| `tailscale_policy.tf` | the tailnet policy -- tags, auto-approved routes, grants |
+| `tailscale_dns.tf`  | MagicDNS and the split DNS for `lab.` and `app.`    |
+| `providers.tf`      | the controller URL, and the tailnet's OAuth client  |
 
 **VMs are not in this table.** A guest's record is defined beside the guest, in
 the [guests](../guests/README.md) layer, through this same provider and API

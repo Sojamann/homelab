@@ -17,7 +17,10 @@ back here -- that is [machines](../machines/README.md).
    with local access only. It is shown exactly once.
 2. **[Cloudflare](./cloudflare.md)** -- the zone and a scoped API token.
    machine-config orders a certificate on its first run and fails without it.
-3. **[Workstation](./workstation.md)** -- toolchain and SSH reachability. Every
+3. **Tailscale.** A tailnet, and an OAuth client for the network layer under
+   *Settings -> Trust credentials*: scopes `policy_file` and `dns`, write. The
+   secret is shown exactly once.
+4. **[Workstation](./workstation.md)** -- toolchain and SSH reachability. Every
    later layer runs from here, not from the machines.
 
 ## Done when
@@ -36,6 +39,8 @@ back here -- that is [machines](../machines/README.md).
   | `wifi_iot_ssid`              | network         | the name, see below            |
   | `wifi_trusted_passphrase`    | network         | PSK                            |
   | `wifi_iot_passphrase`        | network         | PSK                            |
+  | `tailscale_oauth_client_id`  | network         | from step 3                    |
+  | `tailscale_oauth_client_secret` | network      | from step 3                    |
 
   `zone` is not a secret in the usual sense -- it is here because it is the one
   deployment-specific value, and one hiding place beats two.
