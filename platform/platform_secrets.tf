@@ -69,3 +69,28 @@ resource "vault_kv_secret_v2" "kassenbuch" {
     association-name = var.kassenbuch_association_name
   })
 }
+
+####################################
+#               ZOT                #
+####################################
+
+resource "random_password" "zot_push" {
+  length  = 32
+  special = false
+}
+
+# `bcrypt_hash` rather than `bcrypt()`: the function re-salts on every plan
+# and would never settle. The plaintext is for `docker login`; zot only reads
+# the htpasswd line, and re-reads it on restart.
+resource "vault_kv_secret_v2" "zot" {
+  mount = vault_mount.kv.path
+  name  = "zot/registry"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    username = "push"
+    password = random_password.zot_push.result
+    htpasswd = "push:${random_password.zot_push.bcrypt_hash}"
+  })
+}
