@@ -3,6 +3,7 @@
 opentofu = "1.12"
 talosctl = "1.13"
 kubectl = "1.36"
+crane = "0.22"
 
 [env]
 KUBECONFIG = "{{ config_root }}/secrets/kubeconfig"
