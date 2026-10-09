@@ -15,6 +15,10 @@ TODO_DIR = "{{ config_root }}" # for tuxedo
 description = "Commit the staged changes here plus whatever is dirty in flux/ and secrets/"
 run = "./scripts/save.sh"
 
+[tasks.image]
+description = "Push a locally built <app>:<version> to zot and bump flux/apps/<app>"
+run = "./scripts/image.sh"
+
 [tasks.machine-config]
 description = "Configure the machines"
 run = "ansible-playbook machine-config/site.yml"
