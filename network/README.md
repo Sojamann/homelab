@@ -34,7 +34,8 @@ crossing anything: same network, which is why no allow appears here at all.
 - physical homelab equipment uses `.151-.159`, statically assigned and
   deliberately outside the DHCP pool -- which is why that pool stops at `.149`
 - permanent, statically addressed guests -- VMs and containers alike use `.160+`
-- everything else is a normal DHCP client
+- everything else is a normal DHCP client; the few that need a stable address
+  (the TV) get a DHCP reservation inside the pool -- see `unifi_clients.tf`
 
 The `k8s` network is laid out differently, because nothing in it is a person's
 device and almost none of it is a DHCP client:
@@ -138,6 +139,7 @@ the router SNATs to `10.212.2.160`, a Trusted address, which
 | File           | Contents                                              |
 |----------------|-------------------------------------------------------|
 | `unifi_networks.tf` | the VLAN table, and one `unifi_network` per row      |
+| `unifi_clients.tf`  | DHCP reservations -- MAC to fixed address, per network |
 | `unifi_dns.tf`      | the address table, one `A` record per entry, and the `app.` wildcard |
 | `unifi_firewall.tf` | the k8s allow list, the default block, and their order |
 | `unifi_wifi.tf`     | the two SSIDs -- trusted and IoT, named from the vault |
