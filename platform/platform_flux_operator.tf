@@ -1,7 +1,7 @@
 # installing: Flux Operator + Flux Instance
 locals {
-  flux_operator_version = "0.59.0" # chart == operator
-  flux_version          = "2.9.5"  # the distribution it installs
+  flux_operator_version = "0.61.0" # chart == operator
+  flux_version          = "2.9.6"  # the distribution it installs
 
   # Public, so no `pullSecret`. The repo is a submodule at ../flux.
   flux_sync_name = "homelab-apps"

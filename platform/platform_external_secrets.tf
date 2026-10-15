@@ -1,6 +1,6 @@
 # What turns a path in OpenBao into a Secret a workload can mount.
 locals {
-  external_secrets_version = "2.10.0" # chart == appVersion v2.10.0
+  external_secrets_version = "2.12.0" # chart == appVersion v2.12.0
 }
 
 resource "helm_release" "external_secrets" {
@@ -72,7 +72,7 @@ resource "kubectl_manifest" "openbao_secret_store" {
 output "secrets" {
   description = "Where a workload's secrets come from"
   value = {
-    openbao             = "${local.openbao_version} (appVersion v2.6.2) -- raft, static seal, https://${local.openbao_host}"
+    openbao             = "${local.openbao_version} (appVersion v2.7.1) -- raft, static seal, https://${local.openbao_host}"
     external_secrets    = local.external_secrets_version
     cluster_secretstore = "openbao -- kv/<namespace>/<app>/<key>"
   }

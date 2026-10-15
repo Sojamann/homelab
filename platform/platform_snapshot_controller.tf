@@ -11,8 +11,8 @@
 # cluster-scoped and shared: a second CSI driver would use the same ones.
 
 locals {
-  # Chart 5.2.0 -> external-snapshotter v8.6.0.
-  snapshot_controller_version = "5.2.0"
+  # Chart 5.4.0 -> external-snapshotter v8.7.0.
+  snapshot_controller_version = "5.4.0"
 }
 
 resource "helm_release" "snapshot_controller" {
@@ -26,6 +26,9 @@ resource "helm_release" "snapshot_controller" {
 
   values = [yamlencode({
     installCRDs = true
+
+    # An uninstall would otherwise take every VolumeSnapshot with the CRDs.
+    keepCRDs = true
 
     controller = {
       # Raise this alongside the second control plane.

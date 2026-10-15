@@ -1,6 +1,6 @@
 # The cluster's secret store.
 locals {
-  openbao_version = "0.29.4" # chart; appVersion v2.6.2
+  openbao_version = "0.30.3" # chart; appVersion v2.7.1
 
   # Bump to rotate the seal key. The identifier and the key material must move
   # together: OpenBao records the id it sealed with, and a mismatch is a vault

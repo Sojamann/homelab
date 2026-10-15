@@ -1,6 +1,6 @@
 # The second CSI driver: a directory per PV on the NAS, over NFS.
 locals {
-  csi_nfs_version = "4.13.4" # chart == appVersion
+  csi_nfs_version = "4.13.5" # chart == appVersion
 
   csi_nfs_share = "/mnt/slow/k8s-csi"
 }
