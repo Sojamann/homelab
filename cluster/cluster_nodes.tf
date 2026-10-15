@@ -15,7 +15,7 @@ locals {
   # renovate: datasource=github-releases depName=siderolabs/talos
   talos_version = "v1.14.2"
   # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
-  kubernetes_version = "1.36.3"
+  kubernetes_version = "1.36.5"
 
   # KEEP IN SYNC WITH guests/ to match the extensions we have installed initially. Without this list
   # an talos upgrade would install a plain talos without any extensions.
