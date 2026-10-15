@@ -1,5 +1,6 @@
 # The cluster's secret store.
 locals {
+  # renovate: datasource=helm depName=openbao registryUrl=https://openbao.github.io/openbao-helm
   openbao_version = "0.30.3" # chart; appVersion v2.7.1
 
   # Bump to rotate the seal key. The identifier and the key material must move

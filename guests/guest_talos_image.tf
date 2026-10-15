@@ -1,4 +1,5 @@
 locals {
+  # renovate: datasource=github-releases depName=siderolabs/talos
   talos_version = "v1.14.2"
 
   # Extensions are baked into the image, so changing this list means a new

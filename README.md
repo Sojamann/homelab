@@ -25,6 +25,23 @@ mise run cluster plan
 mise run platform plan
 ```
 
+### Updates
+[Renovate](https://docs.renovatebot.com) opens a PR per available update, both
+here and in `flux/` -- each repo has its own `renovate.json`. The PR is the
+notification; the "Dependency Dashboard" issue lists everything outstanding.
+Merging changes the pin only -- applying it is still `mise run <layer>`.
+
+Versions held in tofu `locals` are invisible to Renovate unless annotated on
+the line above:
+
+```hcl
+# renovate: datasource=helm depName=cilium registryUrl=https://helm.cilium.io/
+cilium_version = "1.20.3"
+```
+
+Datasources in use: `helm`, `docker` (OCI charts), `github-releases`. Add
+`extractVersion=^v(?<version>.+)$` when upstream tags carry a `v` the pin does not.
+
 ## Secrets
 
 `secrets/` is a submodule, and the repo behind it is private. Nothing

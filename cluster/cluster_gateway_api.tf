@@ -11,6 +11,7 @@
 
 locals {
   # Not chosen: Cilium 1.20 requires at least v1.6.1. Bump the two together.
+  # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
   gateway_api_version = "v1.6.3"
 
   # What Cilium 1.20 requires, plus TCPRoute. The rest of the standard channel

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "ignorePaths": [
+    "flux/**",
+    "secrets/**"
+  ],
+  "customManagers": [
+    {
+      "description": "Versions in tofu locals, annotated with a `# renovate:` comment on the line above",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.tf$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(\\s+registryUrl=(?<registryUrl>\\S+))?(\\s+extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*\\w+\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Lock files pin registry.opentofu.org; look providers up there so the hashes match",
+      "matchDatasources": [
+        "terraform-provider"
+      ],
+      "registryUrls": [
+        "https://registry.opentofu.org"
+      ]
+    },
+    {
+      "description": "required_version means OpenTofu here, not Terraform; mise.toml tracks it",
+      "matchDepTypes": [
+        "required_version"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Talos and Kubernetes upgrade one minor at a time (MAINTENANCE.md)",
+      "matchPackageNames": [
+        "siderolabs/talos",
+        "kubernetes/kubernetes"
+      ],
+      "separateMultipleMinor": true
+    }
+  ]
+}

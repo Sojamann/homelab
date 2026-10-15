@@ -2,6 +2,7 @@
 # per-app. One issuer, and the wildcard it produces lives in platform_gateway.tf.
 
 locals {
+  # renovate: datasource=docker depName=quay.io/jetstack/charts/cert-manager
   cert_manager_version   = "v1.21.2" # chart == appVersion
   cert_manager_namespace = "cert-manager"
 }

@@ -1,5 +1,6 @@
 # Persistent volumes, as zvols on the NAS shared over NVMe/TCP.
 locals {
+  # renovate: datasource=helm depName=democratic-csi registryUrl=https://democratic-csi.github.io/charts/
   democratic_csi_version = "0.15.1" # chart; appVersion 1.0
 
   # Both are the NAS's second interface, in the k8s network, so neither path

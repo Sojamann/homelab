@@ -1,5 +1,6 @@
 # What turns a path in OpenBao into a Secret a workload can mount.
 locals {
+  # renovate: datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
   external_secrets_version = "2.12.0" # chart == appVersion v2.12.0
 }
 

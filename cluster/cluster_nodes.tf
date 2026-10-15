@@ -12,7 +12,9 @@ locals {
   cluster_fqdn     = "k8s.${var.lab_domain}"
   cluster_endpoint = "https://k8s.${var.lab_domain}:6443"
 
-  talos_version      = "v1.13.10"
+  # renovate: datasource=github-releases depName=siderolabs/talos
+  talos_version = "v1.13.10"
+  # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
   kubernetes_version = "1.36.3"
 
   # KEEP IN SYNC WITH guests/ to match the extensions we have installed initially. Without this list
