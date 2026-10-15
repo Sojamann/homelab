@@ -16,6 +16,7 @@
 - control-plane nodes first, one at a time, then workers
 - kubernetes is upgraded separately, check support matrix first
 - update the version in the guests layer (no changes are expected) just do drag it along
+- bump `talosctl` in mise.toml to the new minor -- an older client rejects a newer node
 
 ```sh
 # 1. db snapshot beforehand
