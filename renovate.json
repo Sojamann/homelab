@@ -3,10 +3,17 @@
   "extends": [
     "config:recommended"
   ],
+  "minimumReleaseAge": "3 days",
+  "minimumReleaseAgeBehaviour": "timestamp-optional",
+  "prCreation": "not-pending",
+  "internalChecksAsSuccess": true,
   "ignorePaths": [
     "flux/**",
     "secrets/**"
   ],
+  "git-submodules": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "description": "Versions in tofu locals, annotated with a `# renovate:` comment on the line above",
@@ -43,6 +50,29 @@
         "kubernetes/kubernetes"
       ],
       "separateMultipleMinor": true
+    },
+    {
+      "description": "flux/ pointer is only a record -- Flux reads homelab-apps main directly, so keep it current without asking",
+      "matchManagers": [
+        "git-submodules"
+      ],
+      "matchDepNames": [
+        "flux"
+      ],
+      "automerge": true,
+      "automergeType": "branch",
+      "ignoreTests": true,
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "secrets/ only moves through `mise run save`",
+      "matchManagers": [
+        "git-submodules"
+      ],
+      "matchDepNames": [
+        "secrets"
+      ],
+      "enabled": false
     }
   ]
 }

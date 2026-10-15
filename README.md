@@ -31,6 +31,11 @@ here and in `flux/` -- each repo has its own `renovate.json`. The PR is the
 notification; the "Dependency Dashboard" issue lists everything outstanding.
 Merging changes the pin only -- applying it is still `mise run <layer>`.
 
+A release is proposed once it is 3 days old (immediately where the registry
+has no release date, as with ghcr.io charts). The `flux` submodule pointer is
+the exception: Renovate commits it straight to `main` whenever homelab-apps
+moves, since Flux reads that repo directly and the pointer is only a record.
+
 Versions held in tofu `locals` are invisible to Renovate unless annotated on
 the line above:
 
