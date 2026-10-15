@@ -15,6 +15,7 @@
 - minor versions: upgrade only to the next adjacent one (patches are fine)
 - control-plane nodes first, one at a time, then workers
 - kubernetes is upgraded separately, check support matrix first
+- update the version in the guests layer (no changes are expected) just do drag it along
 
 ```sh
 # 1. db snapshot beforehand

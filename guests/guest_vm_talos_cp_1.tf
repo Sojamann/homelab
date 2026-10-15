@@ -81,6 +81,16 @@ resource "proxmox_virtual_environment_vm" "talos_cp_1" {
 
   # Otherwise a destroy fails on a running VM.
   stop_on_destroy = true
+
+  # With one node, Talos is upgraded in place with `talosctl upgrade` (see
+  # cluster/README.md), so the image is install media only. Bumping
+  # `talos_version` afterwards mints a new file and would change `import_from`,
+  # replacing the disk -- and with it the whole cluster. Ignored so the bump
+  # only refreshes the image for future nodes. A deliberate rebuild is
+  # `tofu taint`.
+  lifecycle {
+    ignore_changes = [disk[0].import_from]
+  }
 }
 
 resource "unifi_dns_record" "talos_cp_1" {

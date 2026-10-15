@@ -95,7 +95,8 @@ talosctl -n "$NODE" upgrade-k8s --to <version>
 Then reconcile the repo so it stops describing a cluster that no longer exists:
 bump `talos_version` in `cluster/cluster_nodes.tf` **and** in
 `guests/guest_talos_image.tf`, `kubernetes_version` here, `talosctl` in
-`mise.toml`, and apply both layers.
+`mise.toml`, and apply both layers. In the guests layer that only swaps the
+downloaded image; the VM ignores `import_from` changes, so it is left alone.
 
 Once there are three control planes, the better upgrade is to roll nodes one at
 a time from a new image instead -- immutably, through the guests layer. That is
