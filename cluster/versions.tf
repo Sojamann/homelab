@@ -49,7 +49,7 @@ terraform {
   required_providers {
     talos = {
       source  = "siderolabs/talos"
-      version = "~> 0.11"
+      version = "~> 0.12"
     }
 
     # The nodes are found by their Proxmox tags rather than listed here -- see

@@ -60,7 +60,7 @@ terraform {
     # cluster layer's, and no credential of its appears here.
     talos = {
       source  = "siderolabs/talos"
-      version = "~> 0.11"
+      version = "~> 0.12"
     }
   }
 }
