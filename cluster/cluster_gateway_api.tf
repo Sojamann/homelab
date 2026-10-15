@@ -10,17 +10,21 @@
 # Flux's -- see the apps repo's `infrastructure` tier.
 
 locals {
-  # Not chosen: this is what Cilium 1.19 supports. Bump the two together.
-  gateway_api_version = "v1.4.1"
+  # Not chosen: Cilium 1.20 requires at least v1.6.1. Bump the two together.
+  gateway_api_version = "v1.6.3"
 
-  # The standard channel is these five. `TLSRoute` is experimental and only
-  # needed for TLS passthrough; this lab terminates at the Gateway.
+  # What Cilium 1.20 requires, plus TCPRoute. The rest of the standard channel
+  # (ListenerSet, UDPRoute) is optional -- Cilium disables those features
+  # without their CRDs.
   gateway_api_crds = [
     "gatewayclasses",
     "gateways",
     "httproutes",
     "referencegrants",
     "grpcroutes",
+    "backendtlspolicies",
+    "tlsroutes",
+    "tcproutes",
   ]
 }
 
@@ -54,4 +58,38 @@ resource "kubectl_manifest" "gateway_api_crd" {
   yaml_body         = data.http.gateway_api_crd[each.key].response_body
   server_side_apply = true
   force_conflicts   = true
+}
+
+# Upstream's guard on the CRDs above: it refuses experimental-channel CRDs over
+# standard ones, and any bundle older than v1.5. Without it, either mistake
+# applies cleanly; the experimental one can make stored objects unreadable.
+# Deleting it is the escape hatch when a downgrade is truly intended.
+data "http" "gateway_api_vap" {
+  url = join("/", [
+    "https://raw.githubusercontent.com/kubernetes-sigs/gateway-api",
+    local.gateway_api_version,
+    "config/crd/standard/gateway.networking.k8s.io_vap_safeupgrades.yaml",
+  ])
+
+  lifecycle {
+    postcondition {
+      condition     = self.status_code == 200
+      error_message = "GET ${self.url} returned ${self.status_code}"
+    }
+  }
+}
+
+# The policy and its binding, two documents in one file.
+data "kubectl_file_documents" "gateway_api_vap" {
+  content = data.http.gateway_api_vap.response_body
+}
+
+resource "kubectl_manifest" "gateway_api_vap" {
+  for_each = data.kubectl_file_documents.gateway_api_vap.manifests
+
+  yaml_body         = each.value
+  server_side_apply = true
+  force_conflicts   = true
+
+  depends_on = [kubectl_manifest.gateway_api_crd]
 }

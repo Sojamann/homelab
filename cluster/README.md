@@ -58,7 +58,7 @@ layer needs are derived from what it does return:
 | Kubernetes      | 1.36.3                                                     |
 | pods / services | `10.244.0.0/16` / `10.96.0.0/12`                           |
 | CNI             | Cilium 1.19.7, kube-proxy replaced                         |
-| Gateway API     | CRDs v1.4.1 (standard), `GatewayClass/cilium`              |
+| Gateway API     | CRDs v1.6.3 (standard), `GatewayClass/cilium`              |
 | `LoadBalancer`  | `10.212.4.201-.254`, Cilium LB-IPAM + L2 announcements     |
 | ingress address | `10.212.4.200`, a pool of one bound to the Gateway         |
 
@@ -113,9 +113,11 @@ not available with one node, because it destroys the cluster.
   `kubernetes_manifest` does API discovery at plan time and so cannot plan a
   custom resource whose CRD does not exist -- which on a first apply is every
   Cilium CRD.
-- **Gateway API is pinned twice, by two different things.** v1.4.1 is not
-  chosen here, it is what Cilium 1.19 supports. Bumping either means checking
-  the other
+- **Gateway API is pinned twice, by two different things.** v1.6.3 is not
+  chosen here, Cilium 1.20 requires at least v1.6.1. Bumping either means
+  checking the other. Upstream's `safe-upgrades` admission policy is installed
+  alongside and refuses a downgrade below v1.5 -- delete it first if one is
+  ever intended
 - **`.200` is stated four times.** The `ingress` pool here, the wildcard DNS
   record in [network](../network/README.md), that layer's address table, and
   [platform](../platform/README.md), which notes it does not request one.
