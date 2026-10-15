@@ -57,7 +57,7 @@ layer needs are derived from what it does return:
 | Talos           | v1.13.10                                                   |
 | Kubernetes      | 1.36.3                                                     |
 | pods / services | `10.244.0.0/16` / `10.96.0.0/12`                           |
-| CNI             | Cilium 1.19.7, kube-proxy replaced                         |
+| CNI             | Cilium 1.20.3, kube-proxy replaced                         |
 | Gateway API     | CRDs v1.6.3 (standard), `GatewayClass/cilium`              |
 | `LoadBalancer`  | `10.212.4.201-.254`, Cilium LB-IPAM + L2 announcements     |
 | ingress address | `10.212.4.200`, a pool of one bound to the Gateway         |
