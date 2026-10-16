@@ -44,4 +44,8 @@ talosctl -n "$NODE" version --short
 
 # 7. once all nodes are done: kubernetes upgrade
 talosctl -n "$NODE" upgrade-k8s --to <k8s version>
+
+# 8. only now record it: merge the Renovate PRs (cluster + guests), then
+#    apply -- the plan should show the installer image and nothing that rolls
+mise run cluster plan
 ```

@@ -17,6 +17,13 @@ locals {
   # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
   kubernetes_version = "1.36.5"
 
+  # The format the machine config is generated in, held back from talos_version
+  # on purpose: from v1.14 Talos splits install/network/proxy/apiServer into
+  # their own documents, which the v1alpha1 patches in cluster_talos.tf collide
+  # with. Nodes accept older contracts, so raise this only together with
+  # rewriting those patches.
+  talos_config_contract = "v1.13"
+
   # KEEP IN SYNC WITH guests/ to match the extensions we have installed initially. Without this list
   # an talos upgrade would install a plain talos without any extensions.
   talos_extensions = [

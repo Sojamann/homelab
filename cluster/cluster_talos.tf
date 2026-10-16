@@ -10,6 +10,9 @@ resource "talos_machine_secrets" "this" {
 
   lifecycle {
     prevent_destroy = true
+    # Only the version contract the secrets were generated under; bumping it
+    # changes nothing but makes every secret show as "known after apply".
+    ignore_changes = [talos_version]
   }
 }
 
@@ -141,7 +144,7 @@ data "talos_machine_configuration" "controlplane" {
   cluster_endpoint   = local.cluster_endpoint
   machine_type       = "controlplane"
   machine_secrets    = talos_machine_secrets.this.machine_secrets
-  talos_version      = local.talos_version
+  talos_version      = local.talos_config_contract
   kubernetes_version = local.kubernetes_version
 }
 
@@ -150,7 +153,7 @@ data "talos_machine_configuration" "worker" {
   cluster_endpoint   = local.cluster_endpoint
   machine_type       = "worker"
   machine_secrets    = talos_machine_secrets.this.machine_secrets
-  talos_version      = local.talos_version
+  talos_version      = local.talos_config_contract
   kubernetes_version = local.kubernetes_version
 }
 
