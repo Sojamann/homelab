@@ -69,6 +69,28 @@ resource "vault_kv_secret_v2" "kassenbuch" {
 }
 
 ####################################
+#            POCKET ID             #
+####################################
+
+# Encrypts the token signing keys in Pocket ID's database. Unlike the others,
+# losing this loses data: the state is its only backup.
+resource "random_password" "pocket_id_encryption_key" {
+  length  = 48
+  special = false
+}
+
+resource "vault_kv_secret_v2" "pocket_id" {
+  mount = vault_mount.kv.path
+  name  = "pocket-id/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    encryption-key = random_password.pocket_id_encryption_key.result
+  })
+}
+
+####################################
 #               ZOT                #
 ####################################
 
