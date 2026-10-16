@@ -19,3 +19,4 @@
 
 # etcd snapshot from talos upgrades: plaintext dump of every k8s secret
 db.snapshot
+todo.txt
