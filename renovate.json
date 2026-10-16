@@ -37,6 +37,16 @@
       ]
     },
     {
+      "description": "Providers and modules change rarely in use here -- one grouped PR a week",
+      "matchManagers": [
+        "terraform"
+      ],
+      "groupName": "terraform",
+      "schedule": [
+        "* 0-3 * * 1"
+      ]
+    },
+    {
       "description": "required_version means OpenTofu here, not Terraform; mise.toml tracks it",
       "matchDepTypes": [
         "required_version"
