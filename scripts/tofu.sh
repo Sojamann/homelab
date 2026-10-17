@@ -116,6 +116,13 @@ case "$layer" in
     TF_VAR_kassenbuch_password_hash="$(vault_require secrets/vault.yml kassenbuch_password_hash)"
     export TF_VAR_kassenbuch_password_hash
 
+    # Grafana's Pocket ID client, issued by Pocket ID at registration.
+    for key in grafana_oidc_client_id grafana_oidc_client_secret; do
+      value="$(vault_require secrets/vault.yml "$key")"
+      export "TF_VAR_$key=$value"
+    done
+    unset value
+
     # OpenBao is the exception to everything above: this layer does not only
     # write it into the cluster, it configures it over its own API. That needs
     # a route from here to a ClusterIP service, and a port-forward is the only

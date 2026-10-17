@@ -23,6 +23,21 @@ resource "vault_kv_secret_v2" "grafana" {
   })
 }
 
+# Issued by Pocket ID when the client is registered by hand, so it arrives
+# through `secrets/vault.yml`. Losing it costs a re-registration, not access:
+# the admin above still logs in.
+resource "vault_kv_secret_v2" "grafana_oidc" {
+  mount = vault_mount.kv.path
+  name  = "monitoring/grafana-oidc"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    client-id     = var.grafana_oidc_client_id
+    client-secret = var.grafana_oidc_client_secret
+  })
+}
+
 ####################################
 #             ALERTING             #
 ####################################

@@ -53,3 +53,14 @@ variable "kassenbuch_password_hash" {
   type        = string
   sensitive   = true
 }
+
+variable "grafana_oidc_client_id" {
+  description = "Grafana's client id in Pocket ID"
+  type        = string
+}
+
+variable "grafana_oidc_client_secret" {
+  description = "Grafana's client secret in Pocket ID -- shown once, at registration"
+  type        = string
+  sensitive   = true
+}
