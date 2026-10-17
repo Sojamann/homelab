@@ -224,3 +224,52 @@ resource "vault_kubernetes_auth_backend_role" "external_secrets" {
   token_policies = [vault_policy.external_secrets.name]
   token_ttl      = 3600
 }
+
+# People, through Pocket ID. The client admits only `admins`, and the role
+# binds the claim again, so a client opened up to `household` by mistake still
+# lets nobody in. The root token stays for tofu.sh and as break-glass.
+resource "vault_policy" "admin" {
+  name = "admin"
+
+  policy = <<-HCL
+    path "*" {
+      capabilities = ["create", "read", "update", "patch", "delete", "list", "sudo"]
+    }
+  HCL
+}
+
+resource "vault_jwt_auth_backend" "oidc" {
+  path               = "oidc"
+  type               = "oidc"
+  description        = "People, through Pocket ID"
+  oidc_discovery_url = "https://login.${var.app_domain}"
+  oidc_client_id     = var.bao_oidc_client_id
+  oidc_client_secret = var.bao_oidc_client_secret
+  default_role       = "admin"
+
+  # Listed on the UI's login page.
+  tune {
+    listing_visibility = "unauth"
+  }
+}
+
+resource "vault_jwt_auth_backend_role" "admin" {
+  backend   = vault_jwt_auth_backend.oidc.path
+  role_name = "admin"
+  role_type = "oidc"
+
+  # The UI's callback, and the one `bao login -method=oidc` listens on.
+  allowed_redirect_uris = [
+    "https://${local.openbao_host}/ui/vault/auth/oidc/oidc/callback",
+    "http://localhost:8250/oidc/callback",
+  ]
+
+  oidc_scopes  = ["openid", "profile", "groups"]
+  user_claim   = "preferred_username"
+  groups_claim = "groups"
+  bound_claims = { groups = "admins" }
+
+  token_policies = [vault_policy.admin.name]
+  token_ttl      = 8 * 3600
+  token_max_ttl  = 8 * 3600
+}

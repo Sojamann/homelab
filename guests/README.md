@@ -113,6 +113,19 @@ ssh -i secrets/guests-ssh-key ubuntu@vpn.lab.<domain>
    fleecing on if guest disks sit on slow storage.
    **Exclude VM 162 from the job**: it cannot restore itself, and it would be
    backing up its own chunk store.
+7. **Pocket ID login.** In Pocket ID, add client `pbs`: confidential, PKCE
+   off, callback `https://pbs.lab.<domain>:8007`, allowed group `admins`.
+   Then on PBS:
+   ```sh
+   proxmox-backup-manager openid create pocket-id \
+     --issuer-url https://login.<app_domain> \
+     --client-id <id> --client-key <secret> \
+     --username-claim preferred_username --autocreate 0
+   proxmox-backup-manager user create <name>@pocket-id
+   proxmox-backup-manager acl update / Admin --auth-id <name>@pocket-id
+   ```
+   PBS's realm can't map groups, so each admin is created by hand and
+   autocreate stays off. `root@pam` stays as break-glass.
 
 Schedules, and the order is the point -- prune has to run after the backup it
 should count, and GC is the expensive one:

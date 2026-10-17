@@ -43,9 +43,9 @@ Arguments are forwarded to `tofu`. `init` runs automatically on first use.
 
 Read out of the ansible vault by `scripts/tofu.sh` and exported. None is
 Proxmox or UniFi -- this layer talks to the cluster, to the NAS and to OpenBao,
-and to nothing else in the lab. The last six it only carries: they are
-written into OpenBao and `cluster-vars` for Alertmanager, Kassenbuch and
-Grafana's Pocket ID client, and nothing here dials them.
+and to nothing else in the lab. The Telegram, heartbeat, Kassenbuch and
+Grafana values it only carries: they are written into OpenBao and
+`cluster-vars` for the apps, and nothing here dials them.
 
 | Variable                            | Source              | For                          |
 |-------------------------------------|---------------------|------------------------------|
@@ -61,6 +61,8 @@ Grafana's Pocket ID client, and nothing here dials them.
 | `TF_VAR_kassenbuch_password_hash`   | `secrets/vault.yml` | Kassenbuch's login           |
 | `TF_VAR_grafana_oidc_client_id`     | `secrets/vault.yml` | Grafana's Pocket ID client   |
 | `TF_VAR_grafana_oidc_client_secret` | `secrets/vault.yml` | its secret                   |
+| `TF_VAR_bao_oidc_client_id`         | `secrets/vault.yml` | OpenBao's Pocket ID client   |
+| `TF_VAR_bao_oidc_client_secret`     | `secrets/vault.yml` | its secret                   |
 | `VAULT_TOKEN`                       | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
 
 > the terraform state is committed and encrypted.
@@ -109,6 +111,18 @@ next to the lock and what guards it is RBAC.
 **ESO holds no credential.** It presents its own ServiceAccount token; OpenBao
 validates it against the apiserver and maps it to a policy with `read` on
 `kv/data/*`. PushSecret is off, so nothing here can write back.
+
+**People log in through Pocket ID.** OIDC auth at `oidc/`, for the `admins`
+group only, which gets policy `admin`: everything, with an 8h token. The
+UI's "OIDC" method, or from a workstation:
+
+```sh
+bao login -method=oidc
+```
+
+The Pocket ID client is confidential, PKCE off, with two callbacks:
+`https://bao.<app_domain>/ui/vault/auth/oidc/oidc/callback` and
+`http://localhost:8250/oidc/callback`.
 
 **The values are this layer's**, mirrored from the ansible vault or generated
 by tofu -- so the encrypted state is the backup, and losing the volume costs a
@@ -210,7 +224,8 @@ kubectl -n flux-system get fluxinstance flux
 ## Known trade-offs
 
 - **The root token is the root token.** Not a scoped one, and it lives in the
-  ansible vault. TODO.
+  ansible vault, because tofu.sh configures OpenBao with it. People use
+  Pocket ID; the root token is for tofu and break-glass.
 - **The seal key is next to the lock.** Deliberate: it is what makes an
   unattended reboot possible on a cluster with no KMS. RBAC on one Secret is
   the whole control, and losing the state means losing the key means the raft

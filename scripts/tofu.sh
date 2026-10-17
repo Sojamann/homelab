@@ -116,8 +116,9 @@ case "$layer" in
     TF_VAR_kassenbuch_password_hash="$(vault_require secrets/vault.yml kassenbuch_password_hash)"
     export TF_VAR_kassenbuch_password_hash
 
-    # Grafana's Pocket ID client, issued by Pocket ID at registration.
-    for key in grafana_oidc_client_id grafana_oidc_client_secret; do
+    # Pocket ID clients, issued by Pocket ID at registration.
+    for key in grafana_oidc_client_id grafana_oidc_client_secret \
+      bao_oidc_client_id bao_oidc_client_secret; do
       value="$(vault_require secrets/vault.yml "$key")"
       export "TF_VAR_$key=$value"
     done

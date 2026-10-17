@@ -44,3 +44,28 @@ Set up [truenas](./truenas.md) first -- bulk storage comes over NFS from the NAS
 4. Uncomment the node in `machine-config/inventory/hosts.yml`, add an `A`
    record in `network/unifi_dns.tf`, and add it to `guests/guest_nodes.tf` if it
    is to store guest disks.
+5. **Pocket ID callback.** Add `https://<node>.lab.<domain>:8006` to the
+   `proxmox` client's callbacks.
+
+## Pocket ID login
+
+Once for the whole cluster, after machine-config (the realm lives in
+`/etc/pve`). `root@pam` stays as break-glass.
+
+1. In Pocket ID, add client `proxmox`: confidential, PKCE off, one callback
+   per node (`https://<node>.lab.<domain>:8006`), allowed group `admins`.
+2. On any node:
+   ```sh
+   pveum group add admins-pocket-id
+   pveum acl modify / --groups admins-pocket-id --roles Administrator
+   pveum realm add pocket-id --type openid \
+     --issuer-url https://login.<app_domain> \
+     --client-id <id> --client-key <secret> \
+     --scopes "openid email profile groups" \
+     --username-claim preferred_username \
+     --groups-claim groups --groups-overwrite 1 \
+     --autocreate 1 --default 1
+   ```
+   Proxmox names a claimed group `<group>-<realm>`, so `admins` arrives as
+   `admins-pocket-id`. With overwrite on, leaving `admins` takes the rights
+   away at the next login.
