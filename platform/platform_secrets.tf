@@ -106,6 +106,22 @@ resource "vault_kv_secret_v2" "pocket_id" {
 }
 
 ####################################
+#           VAULTWARDEN            #
+####################################
+
+# Only the /admin token's hash, as for Kassenbuch: the plaintext lives offline.
+resource "vault_kv_secret_v2" "vaultwarden" {
+  mount = vault_mount.kv.path
+  name  = "vaultwarden/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    admin-token = var.vaultwarden_admin_token_hash
+  })
+}
+
+####################################
 #               ZOT                #
 ####################################
 

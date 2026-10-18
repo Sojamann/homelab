@@ -54,6 +54,12 @@ variable "kassenbuch_password_hash" {
   sensitive   = true
 }
 
+variable "vaultwarden_admin_token_hash" {
+  description = "Vaultwarden /admin token, argon2id PHC string from `vaultwarden hash`"
+  type        = string
+  sensitive   = true
+}
+
 variable "grafana_oidc_client_id" {
   description = "Grafana's client id in Pocket ID"
   type        = string

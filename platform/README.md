@@ -43,27 +43,28 @@ Arguments are forwarded to `tofu`. `init` runs automatically on first use.
 
 Read out of the ansible vault by `scripts/tofu.sh` and exported. None is
 Proxmox or UniFi -- this layer talks to the cluster, to the NAS and to OpenBao,
-and to nothing else in the lab. The Telegram, heartbeat, Kassenbuch and
-Grafana values it only carries: they are written into OpenBao and
+and to nothing else in the lab. The Telegram, heartbeat, Kassenbuch,
+Vaultwarden and Grafana values it only carries: they are written into OpenBao and
 `cluster-vars` for the apps, and nothing here dials them.
 
-| Variable                            | Source              | For                          |
-|-------------------------------------|---------------------|------------------------------|
-| `TF_VAR_truenas_api_key`            | `secrets/vault.yml` | democratic-csi -> TrueNAS API |
-| `TF_VAR_cloudflare_api_token`       | `secrets/vault.yml` | cert-manager's DNS-01 solver  |
-| `TF_VAR_terraform_state_passphrase` | `secrets/vault.yml` | this layer's encrypted state  |
-| `TF_VAR_lab_domain`                 | `secrets/vault.yml` | the NAS's name                |
-| `TF_VAR_app_domain`                 | `secrets/vault.yml` | what the gateway serves       |
-| `TF_VAR_acme_email`                 | `secrets/vault.yml` | the Let's Encrypt account     |
-| `TF_VAR_telegram_bot_token`         | `secrets/vault.yml` | Alertmanager -> Telegram      |
-| `TF_VAR_telegram_chat_id`           | `secrets/vault.yml` | the group it posts into       |
-| `TF_VAR_heartbeat_url`              | `secrets/vault.yml` | the `Watchdog` heartbeat      |
-| `TF_VAR_kassenbuch_password_hash`   | `secrets/vault.yml` | Kassenbuch's login           |
-| `TF_VAR_grafana_oidc_client_id`     | `secrets/vault.yml` | Grafana's Pocket ID client   |
-| `TF_VAR_grafana_oidc_client_secret` | `secrets/vault.yml` | its secret                   |
-| `TF_VAR_bao_oidc_client_id`         | `secrets/vault.yml` | OpenBao's Pocket ID client   |
-| `TF_VAR_bao_oidc_client_secret`     | `secrets/vault.yml` | its secret                   |
-| `VAULT_TOKEN`                       | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
+| Variable                              | Source              | For                                   |
+|---------------------------------------|---------------------|---------------------------------------|
+| `TF_VAR_truenas_api_key`              | `secrets/vault.yml` | democratic-csi -> TrueNAS API         |
+| `TF_VAR_cloudflare_api_token`         | `secrets/vault.yml` | cert-manager's DNS-01 solver          |
+| `TF_VAR_terraform_state_passphrase`   | `secrets/vault.yml` | this layer's encrypted state          |
+| `TF_VAR_lab_domain`                   | `secrets/vault.yml` | the NAS's name                        |
+| `TF_VAR_app_domain`                   | `secrets/vault.yml` | what the gateway serves               |
+| `TF_VAR_acme_email`                   | `secrets/vault.yml` | the Let's Encrypt account             |
+| `TF_VAR_telegram_bot_token`           | `secrets/vault.yml` | Alertmanager -> Telegram              |
+| `TF_VAR_telegram_chat_id`             | `secrets/vault.yml` | the group it posts into               |
+| `TF_VAR_heartbeat_url`                | `secrets/vault.yml` | the `Watchdog` heartbeat              |
+| `TF_VAR_kassenbuch_password_hash`     | `secrets/vault.yml` | Kassenbuch's login                    |
+| `TF_VAR_vaultwarden_admin_token_hash` | `secrets/vault.yml` | Vaultwarden's `/admin`                |
+| `TF_VAR_grafana_oidc_client_id`       | `secrets/vault.yml` | Grafana's Pocket ID client            |
+| `TF_VAR_grafana_oidc_client_secret`   | `secrets/vault.yml` | its secret                            |
+| `TF_VAR_bao_oidc_client_id`           | `secrets/vault.yml` | OpenBao's Pocket ID client            |
+| `TF_VAR_bao_oidc_client_secret`       | `secrets/vault.yml` | its secret                            |
+| `VAULT_TOKEN`                         | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
 
 > the terraform state is committed and encrypted.
 
