@@ -60,6 +60,12 @@ variable "vaultwarden_admin_token_hash" {
   sensitive   = true
 }
 
+variable "garage_metrics_token" {
+  description = "Bearer token for Garage's /metrics on the NAS"
+  type        = string
+  sensitive   = true
+}
+
 variable "grafana_oidc_client_id" {
   description = "Grafana's client id in Pocket ID"
   type        = string

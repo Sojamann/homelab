@@ -5,6 +5,8 @@
 - check on storage health (scrub + SMART results)
 - check on growth of datasets
 - check snapshot/replication tasks ran, occasionally test-restore a file
+- apps (`machines/truenas/apps/`): after merging a Renovate bump, edit the app
+  in TrueNAS and set the new tag -- nothing applies it automatically
 
 ## Proxmox
 - check for updates (`apt update && apt full-upgrade`), reboot on new kernel

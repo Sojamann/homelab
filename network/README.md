@@ -113,6 +113,10 @@ volume, and two things must both hold to prevent it:
   it. Necessary because `Internal -> Internal` ends in the predefined allow-all
   and Trusted -> k8s stays open by design.
 
+Garage (S3) on `:3900`/`:3903` answers on both NAS addresses, keyed per
+bucket. `s3-deny-cross-vlan` keeps Guest, Management and IoT off both; Trusted
+(and so the tailnet) and k8s are its clients.
+
 The NAS binds everything else -- SMB, ssh -- to Trusted. The exception is the
 TrueNAS API, which shares a listener with the web UI, so the login page is
 reachable from k8s: an accepted trade, see

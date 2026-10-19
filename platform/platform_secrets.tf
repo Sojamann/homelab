@@ -67,6 +67,23 @@ resource "vault_kv_secret_v2" "alerting" {
 }
 
 ####################################
+#              GARAGE              #
+####################################
+
+# Garage runs on the NAS, so its token is generated there and arrives through
+# `secrets/vault.yml`. Prometheus reads it from here.
+resource "vault_kv_secret_v2" "garage_metrics" {
+  mount = vault_mount.kv.path
+  name  = "monitoring/garage"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    metrics-token = var.garage_metrics_token
+  })
+}
+
+####################################
 #            KASSENBUCH            #
 ####################################
 

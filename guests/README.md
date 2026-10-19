@@ -100,11 +100,15 @@ ssh -i secrets/guests-ssh-key ubuntu@vpn.lab.<domain>
 ## Backups
 
 1. **Install.** Console on VM 162: address `10.212.2.162/24`, gateway
-   `10.212.2.1`, hostname `pbs.lab.<domain>`. 20G is the operating system and
-   nothing else; the backups live on the NAS.
-2. **Datastore.** The `slow/pbs-backups` zvol reaches PBS over iSCSI -- see
-   [machines/truenas.md](../machines/truenas.md) for the NAS half. Create
-   the datastore in PBS on the mounted iSCSI drive.
+   `10.212.2.1`, hostname `pbs.lab.<domain>`, onto `scsi0` (20G, the OS).
+2. **Cache disk.** `scsi1` (8G) is the S3 datastore's local cache: format it,
+   mount it at `/mnt/datastore/pbs-cache`. PBS fills whatever it gets, so the
+   disk is the limit. Grow in `guest_vm_pbs.tf`, then `growpart` + `resize2fs`.
+3. **Datastore.** The backups live in Garage, bucket `pbs` -- see
+   [machines/truenas.md](../machines/truenas.md#s3-garage). *Configuration* ->
+   *S3 Endpoints* -> *Add*: `s3.lab.<domain>`, port `3900`, region `lab`,
+   path-style, key `garage_pbs_*` from the vault. Then *Add Datastore*, backend
+   S3, name `pbs`, cache path from step 2.
 4. **Token.** User `backup@pbs`, token `backup@pbs!lab`, permission
    **DatastoreBackup** on `/datastore/pbs`
 5. **Storage entry.** *Datacenter* -> *Storage* -> *Add* -> *Proxmox Backup
@@ -126,6 +130,11 @@ ssh -i secrets/guests-ssh-key ubuntu@vpn.lab.<domain>
    ```
    PBS's realm can't map groups, so each admin is created by hand and
    autocreate stays off. `root@pam` stays as break-glass.
+
+**Moving an existing datastore** (how the iSCSI zvol was retired): create
+the S3 one under a new name, run a local *Sync Job* old -> new, repoint the
+storage entry, token ACL and job, test a restore, then remove the old datastore. Same
+encryption key on both sides, or nothing dedups.
 
 Schedules, and the order is the point -- prune has to run after the backup it
 should count, and GC is the expensive one:

@@ -13,7 +13,7 @@ resource "proxmox_virtual_environment_vm" "pbs" {
 
   description = <<-EOT
     Proxmox Backup Server. This layer builds the VM and attaches the install
-    media; the installer, the datastore on the NAS and the cluster's storage
+    media; the installer, the S3 datastore on the NAS and the cluster's storage
     entry are all done by hand -- see guests/README.md.
   EOT
 
@@ -36,6 +36,18 @@ resource "proxmox_virtual_environment_vm" "pbs" {
     datastore_id = local.guest_datastore
     interface    = "scsi0"
     size         = 20
+    file_format  = "qcow2"
+    iothread     = true
+    discard      = "on"
+    ssd          = true
+  }
+
+  # The S3 datastore's local cache. PBS fills whatever space it gets, so a disk
+  # of its own is the size limit. Grow it here, then in the guest.
+  disk {
+    datastore_id = local.guest_datastore
+    interface    = "scsi1"
+    size         = 8
     file_format  = "qcow2"
     iothread     = true
     discard      = "on"

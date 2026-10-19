@@ -60,6 +60,7 @@ Vaultwarden and Grafana values it only carries: they are written into OpenBao an
 | `TF_VAR_heartbeat_url`                | `secrets/vault.yml` | the `Watchdog` heartbeat              |
 | `TF_VAR_kassenbuch_password_hash`     | `secrets/vault.yml` | Kassenbuch's login                    |
 | `TF_VAR_vaultwarden_admin_token_hash` | `secrets/vault.yml` | Vaultwarden's `/admin`                |
+| `TF_VAR_garage_metrics_token`         | `secrets/vault.yml` | Prometheus -> Garage's `/metrics`     |
 | `TF_VAR_grafana_oidc_client_id`       | `secrets/vault.yml` | Grafana's Pocket ID client            |
 | `TF_VAR_grafana_oidc_client_secret`   | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_bao_oidc_client_id`           | `secrets/vault.yml` | OpenBao's Pocket ID client            |

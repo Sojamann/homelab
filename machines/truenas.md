@@ -41,10 +41,11 @@ included.
      what keeps it from locking you out
 7. get a certificate for the domain: *Credentials* -> *Certificates*
    - add ACME DNS credentials
-   - add a CSR, e.g. `lab-csr`, with **both names**: `nas.lab.<domain>` and
-     `nas-k8s.lab.<domain>`. One certificate serves both interfaces, and
-     democratic-csi verifies the second -- a missing SAN there is a driver that
-     cannot talk to the NAS
+   - add a CSR, e.g. `lab-csr`, with **four names**: `nas.lab.<domain>`,
+     `nas-k8s.lab.<domain>`, `s3.lab.<domain>`, `s3-k8s.lab.<domain>`. One
+     certificate serves both interfaces and [Garage](#s3-garage). democratic-csi
+     verifies `nas-k8s` -- a missing SAN there is a driver that cannot talk to
+     the NAS. SANs are fixed per CSR: adding a name means a new CSR and order
    - on the CSR: order certificate
    - *System* -> *General* -> *GUI* -> set it as the UI certificate
 8. login to the TrueNAS ui through the dns record
@@ -75,7 +76,7 @@ Infos:
   never by widening one
 - mirror `fast` later with `zpool attach` / UI *Extend*, **never** `zpool add`
 - ~4TB usable on `slow`, stay under 80% -> ~3.2TB
-- no quotas, no reservations, except `time-machine` and `ha-backups`
+- no reservations; quotas only on `time-machine`, `ha-backups` and `garage`
 
 Scrub tasks -- both pools, *Data Protection* -> *Scrub Tasks*:
 
@@ -108,7 +109,9 @@ Rules:
 ```
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
-├── pbs-backups      PBS datastore -- a *zvol*, not a dataset (iSCSI)
+├── garage/          S3, see S3 (Garage)
+│   ├── meta         metadata DB
+│   └── data         object blocks
 ├── ha-backups/      Home Assistant's own backups, over SMB
 ├── node-exporter/   textfile metrics, see Monitoring
 ├── users/<name>/files/          the SMB share root
@@ -134,7 +137,9 @@ by hand, and every `bulk` volume lives within it.
 | Dataset                     | recordsize | compr | Snapshots         | Share / consumer        |
 |-----------------------------|------------|-------|-------------------|-------------------------|
 | `k8s-csi`                   | 128K       | lz4   | hourly (24h retention) + daily (30d retention), **not** recursive | NFS, the `bulk` StorageClass |
-| `pbs-backups` (zvol)        | 64K†       | lz4   | daily, **3d**     | iSCSI, PBS              |
+| `garage`                    | --         | lz4   | daily, **7d**, recursive | -- (children only), quota **1T** |
+| `garage/meta`               | 16K        | lz4   | via `garage` task | Garage (LMDB)           |
+| `garage/data`               | 1M         | lz4   | via `garage` task | Garage (blocks)         |
 | `ha-backups`                | 1M         | lz4   | daily, **14d**    | SMB, Home Assistant     |
 | `node-exporter`             | 128K       | lz4   | **none**          | node-exporter app (ro)  |
 | `users`                     | 128K       | zstd  | hourly (24h retention) + daily (30d retention), recursive, exclude `users/*/time-machine` | -- (children only) |
@@ -153,9 +158,10 @@ One recursive task on `slow/users` covers every user, current and future --
 no per-user task. Recursive means one snapshot **per dataset** (same name,
 atomic), not one snapshot of the tree: each user rolls back and browses
 `.zfs/snapshot` independently.
-- `pbs-backups` -- same trap: snapshots pin chunks PBS GC wants to free. And
-  a snapshot of a zvol is block-level, so it is a rollback and nothing else --
-  there is no `.zfs/snapshot` to browse and no way to pull one backup out of it.
+- `garage` -- short for the same trap: snapshots pin blocks PBS GC frees. Kept
+  at all because Garage has no object lock; this is what survives a client
+  deleting its own bucket. Recursive, so `meta` and `data` stay consistent.
+  Rollback hits every tenant -- for one bucket, clone and copy out instead.
 - `node-exporter` -- rewritten every minute, nothing worth keeping.
 - `ha-backups` -- 1M because a backup is one multi-GB tar written straight
   through, and `lz4` is a near no-op on it.
@@ -207,7 +213,8 @@ in *System* -> *General* -> *GUI*, the rest on each service:
 | SSH     | `10.212.2.150`                        | same                         |
 | NVMe-oF | `10.212.4.150`                        | the cluster, nothing else    |
 | NFS     | `10.212.4.150`                        | the cluster, nothing else    |
-| iSCSI   | `10.212.2.150`                        | PBS, which is on Trusted     |
+| Garage S3 `:3900`    | `10.212.2.150` **and** `10.212.4.150` | PBS on Trusted, pods on k8s |
+| Garage admin `:3903` | `10.212.2.150`; k8s `/metrics` only   | you; Prometheus |
 | node-exporter | `10.212.4.150:9100`             | Prometheus, see [Monitoring](#monitoring) |
 
 The UI is the uncomfortable row: TrueNAS serves it and the API on one listener
@@ -238,18 +245,7 @@ not new. What scopes it is the dedicated user and that the key is revocable.
   curl -sH "Authorization: Bearer $TRUENAS_API_KEY" \
     https://nas.lab.<domain>/api/v2.0/nvmet/port
   ```
-- needs TrueNAS **25.10+**. iSCSI is on, but only for PBS -- see below.
-
-**iSCSI** -- one target, one extent, one consumer: the PBS datastore. On for no
-other reason, and the second block protocol on this box because PBS cannot use
-NVMe-oF.
-- portal on `10.212.2.150` only, and an initiator group holding PBS's IQN
-  (`/etc/iscsi/initiatorname.iscsi` on the guest) and nothing else. **No CHAP**
-  -- those two together are the whole access control, the same shape as NVMe-oF
-- extent type **Device**, pointed at the `slow/pbs-backups` zvol. Logical block
-  size **4096**
-- thick, not sparse
-- never mount this LUN from anything but PBS.
+- needs TrueNAS **25.10+**. iSCSI stays **off**.
 
 **SMB** -- one share per `users/<name>/files`, plus `ha-backups`.
 - leave the **share ACL at default** -- effective access is the intersection of
@@ -259,7 +255,7 @@ NVMe-oF.
 - Access Based Share Enumeration **on**, Browsable **on**
 - Read Only off, Hosts Allow/Deny empty, Apple encoding off, Audit off
 
-**NFS** -- export for CSI driver and PBS
+**NFS** -- export for the CSI driver
 - **NFSv4 on**, v3 ownership model off -- v4 is what the driver mounts
   (`nfsvers=4.1`), and v3 would be a second, weaker way in
 
@@ -333,22 +329,8 @@ node-exporter as a custom app, scraped by the cluster's Prometheus -- see
    zpool list -Hp -o name,size,alloc,free | awk '{printf "nas_zpool_size_bytes{pool=\"%s\"} %s\nnas_zpool_allocated_bytes{pool=\"%s\"} %s\nnas_zpool_free_bytes{pool=\"%s\"} %s\n",$1,$2,$1,$3,$1,$4}' > /mnt/slow/node-exporter/zpool.prom.tmp && mv /mnt/slow/node-exporter/zpool.prom.tmp /mnt/slow/node-exporter/zpool.prom
    ```
    node-exporter cannot see pool size; `mv` keeps it from reading half a file
-4. *Apps* -> *Discover Apps* -> *Custom App* -> *Install via YAML*:
-   ```yaml
-   services:
-     node-exporter:
-       image: quay.io/prometheus/node-exporter:v1.12.1
-       network_mode: host
-       pid: host
-       restart: unless-stopped
-       command:
-         - --path.rootfs=/host
-         - --web.listen-address=10.212.4.150:9100
-         - --collector.textfile.directory=/textfile
-       volumes:
-         - /:/host:ro,rslave
-         - /mnt/slow/node-exporter:/textfile:ro
-   ```
+4. *Apps* -> *Discover Apps* -> *Custom App* -> *Install via YAML*: paste
+   [apps/node-exporter/compose.yaml](./truenas/apps/node-exporter/compose.yaml)
 5. verify from Trusted:
    ```sh
    curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|node_zfs_zpool_state)'
@@ -357,10 +339,55 @@ node-exporter as a custom app, scraped by the cluster's Prometheus -- see
 
 Pool state comes from node-exporter itself; SMART is not exported.
 
+## S3 (Garage)
+
+Generic S3 for the lab: one bucket per consumer. Garage plus a Caddy sidecar
+for TLS, in [apps/garage/compose.yaml](./truenas/apps/garage/compose.yaml).
+Garage listens on loopback only; Caddy owns the ports (table above).
+
+On the NAS, not in k8s: PBS restores the cluster's VMs, so its path must not
+need the cluster.
+
+Install:
+
+1. datasets `slow/garage`, `meta`, `data` per [the table](#creating-datasets);
+   quota 1T on `slow/garage`; snapshot task daily, recursive, 7d
+2. CSR with the `s3` SANs, see [First Setup](#first-setup)
+3. *Install via YAML*: paste the compose file, filling `<placeholders>` from
+   `secrets/vault.yml` (`garage_*`), `<domain>`, and `<cert>` -- the name in
+   `/etc/certificates/`
+4. *Cron Jobs*, `root`, weekly -- Caddy does not watch the cert files:
+   ```sh
+   docker exec ix-garage-caddy-1 caddy reload --force --config /etc/caddy/Caddyfile
+   ```
+5. layout, once:
+   ```sh
+   alias garage='docker exec ix-garage-garage-1 /garage'
+   garage status                                   # node id
+   garage layout assign -z nas -c 1T <node-id>
+   garage layout apply --version 1
+   ```
+
+A consumer (region `lab`, path-style, `https://s3[-k8s].lab.<domain>:3900`):
+
+```sh
+garage bucket create <name>
+garage bucket set-quotas <name> --max-size <size>
+garage key create <name>                          # shown once
+garage bucket allow --read --write <name> --key <name>
+```
+
+Never `--owner`. Key into `secrets/vault.yml`; k8s consumers get it via
+platform at `kv/<ns>/<app>/s3`.
+
+| Bucket | Quota | Consumer |
+|--------|-------|----------|
+| `pbs`  | 300G  | PBS datastore, see [guests](../guests/README.md#backups) |
+
 ## Backup Layers
 
 1. **ZFS snapshots** -- undo, same pool. Survives a mistake and nothing else.
-2. **PBS on `slow/pbs-backups`** -- per-VM, per-file restore. Survives a dead
+2. **PBS on Garage (`slow/garage`)** -- per-VM, per-file restore. Survives a dead
    guest, node or NVMe. The PBS VM itself lives on node-local `local`.
 3. **Home Assistant's own backups on `slow/ha-backups`** -- application-level,
    and the reason for a second copy of one guest: PBS restores the VM, this

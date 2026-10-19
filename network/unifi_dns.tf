@@ -16,6 +16,10 @@ locals {
     # carries both names as SANs. See machines/truenas.md.
     "nas-k8s" : "10.212.4.150",
 
+    # Garage (S3) on the NAS, one name per interface like the two above.
+    s3 : "10.212.2.150",
+    "s3-k8s" : "10.212.4.150",
+
     # generic worker machines running proxmox
     titan : "10.212.2.151",
     enceladus : "10.212.2.152",

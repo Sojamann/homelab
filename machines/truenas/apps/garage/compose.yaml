@@ -1,0 +1,87 @@
+# Garage (S3) + Caddy for TLS. See machines/truenas.md#s3-garage.
+# Fill the <placeholders> at paste time; values live in secrets/vault.yml.
+#
+# Garage listens on loopback only; Caddy owns the network:
+#   :3900  S3          both NAS addresses
+#   :3903  admin API   Trusted; on k8s only /metrics
+services:
+  garage:
+    image: dxflrs/garage:v2.4.1
+    network_mode: host
+    restart: unless-stopped
+    configs:
+      - source: garage
+        target: /etc/garage.toml
+    volumes:
+      - /mnt/slow/garage/meta:/var/lib/garage/meta
+      - /mnt/slow/garage/data:/var/lib/garage/data
+
+  caddy:
+    image: caddy:2.11.7-alpine
+    network_mode: host
+    restart: unless-stopped
+    configs:
+      - source: caddy
+        target: /etc/caddy/Caddyfile
+    volumes:
+      # TrueNAS's ACME certificate, renewed by TrueNAS. A cron task runs
+      # `caddy reload --force` weekly to pick up the new one.
+      - /etc/certificates:/certs:ro
+
+configs:
+  garage:
+    content: |
+      replication_factor = 1
+      db_engine = "lmdb"
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir = "/var/lib/garage/data"
+      metadata_auto_snapshot_interval = "6h"
+      # ZFS compresses already (lz4)
+      compression_level = "none"
+
+      rpc_bind_addr = "127.0.0.1:3901"
+      rpc_public_addr = "127.0.0.1:3901"
+      rpc_secret = "<garage_rpc_secret>"
+
+      [s3_api]
+      api_bind_addr = "127.0.0.1:3910"
+      s3_region = "lab"
+
+      [admin]
+      api_bind_addr = "127.0.0.1:3913"
+      admin_token = "<garage_admin_token>"
+      metrics_token = "<garage_metrics_token>"
+
+  caddy:
+    content: |
+      {
+        # TrueNAS holds :80/:443; certs come from TrueNAS
+        auto_https off
+      }
+
+      (tls) {
+        tls /certs/<cert>.crt /certs/<cert>.key
+      }
+
+      https://s3.lab.<domain>:3900, https://s3-k8s.lab.<domain>:3900 {
+        bind 10.212.2.150 10.212.4.150
+        import tls
+        reverse_proxy 127.0.0.1:3910
+      }
+
+      https://s3.lab.<domain>:3903 {
+        bind 10.212.2.150
+        import tls
+        reverse_proxy 127.0.0.1:3913
+      }
+
+      https://s3-k8s.lab.<domain>:3903 {
+        bind 10.212.4.150
+        import tls
+        handle /metrics {
+          reverse_proxy 127.0.0.1:3913
+        }
+        handle {
+          respond 404
+        }
+      }

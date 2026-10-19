@@ -1,5 +1,5 @@
 provider "unifi" {
-  api_url = "https://10.212.1.1"
+  api_url = "https://10.212.2.1"
 
   # UNIFI_API_KEY, exported by scripts/tofu.sh from the ansible vault. Create
   # it under *Control Plane -> Admins & Users*, on a limited admin with local

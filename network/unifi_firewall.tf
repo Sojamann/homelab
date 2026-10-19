@@ -33,6 +33,38 @@ resource "unifi_firewall_zone_policy" "nvmeof_deny" {
 }
 
 
+# Garage's S3 and admin ports, on both NAS addresses. Keys are the real
+# guard; this keeps the untrusted networks from knocking. Trusted reaches
+# `s3` on L2 and k8s is covered by `k8s_deny`, so neither is listed.
+resource "unifi_firewall_group" "s3_ports" {
+  name    = "s3-ports"
+  type    = "port-group"
+  members = ["3900", "3903"]
+}
+
+resource "unifi_firewall_zone_policy" "s3_deny" {
+  name        = "s3-deny-cross-vlan"
+  description = "Only Trusted and k8s may reach Garage on the NAS"
+  action      = "BLOCK"
+  protocol    = "tcp"
+  logging     = true
+
+  source = {
+    zone_id = data.unifi_firewall_zone.internal.id
+    network_ids = [
+      for name in ["Guest", "Management", "IoT"] :
+      unifi_network.this[name].id
+    ]
+  }
+
+  destination = {
+    zone_id       = data.unifi_firewall_zone.internal.id
+    ips           = [local.dns_records["s3"], local.dns_records["s3-k8s"]]
+    port_group_id = unifi_firewall_group.s3_ports.id
+  }
+}
+
+
 # node-exporter and pve-exporter, installed by machine-config. One group so
 # the scrape is a single policy: the provider takes one port per policy.
 resource "unifi_firewall_group" "exporter_ports" {
@@ -154,6 +186,7 @@ resource "unifi_firewall_zone_policy_order" "internal" {
   # The allows have to precede k8s_deny, which would otherwise match first.
   before_predefined_ids = [
     unifi_firewall_zone_policy.nvmeof_deny.id,
+    unifi_firewall_zone_policy.s3_deny.id,
     unifi_firewall_zone_policy.metrics_allow.id,
     unifi_firewall_zone_policy.ha_metrics_allow.id,
     unifi_firewall_zone_policy.k8s_deny.id,
