@@ -13,7 +13,7 @@ locals {
   cluster_endpoint = "https://k8s.${var.lab_domain}:6443"
 
   # renovate: datasource=github-releases depName=siderolabs/talos
-  talos_version = "v1.14.3"
+  talos_version = "v1.14.4"
   # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
   kubernetes_version = "1.37.1"
 
