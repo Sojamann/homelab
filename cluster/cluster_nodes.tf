@@ -15,7 +15,7 @@ locals {
   # renovate: datasource=github-releases depName=siderolabs/talos
   talos_version = "v1.14.2"
   # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
-  kubernetes_version = "1.36.5"
+  kubernetes_version = "1.37.1"
 
   # The format the machine config is generated in, held back from talos_version
   # on purpose: from v1.14 Talos splits install/network/proxy/apiServer into

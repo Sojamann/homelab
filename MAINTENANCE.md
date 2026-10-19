@@ -49,3 +49,31 @@ talosctl -n "$NODE" upgrade-k8s --to <k8s version>
 #    apply -- the plan should show the installer image and nothing that rolls
 mise run cluster plan
 ```
+
+## K8s
+- check the Talos support matrix -- the running Talos version must support the target k8s
+- read the k8s changelog "Urgent Upgrade Notes" + removed/deprecated APIs
+- check deprecated API usage before upgrading (`kubectl get --raw /metrics | grep apiserver_requested_deprecated_apis`)
+- check helm charts/controllers (cilium, flux, CSI drivers, etc.) support the new version
+- minor versions: one at a time (no skipping), patches are fine
+- after the upgrade: bump `kubernetes_version` in `cluster/cluster_nodes.tf` and `kubectl` in mise.toml
+  (kubectl supports +/-1 minor skew), then `mise run cluster plan` -- should be a no-op on the nodes
+
+```sh
+# 1. db snapshot beforehand
+talosctl etcd snapshot ./db.snapshot
+
+# 2. pick any one control-plane node -- unlike the Talos upgrade this is
+#    cluster-wide, the node is only the entry point, run it once
+NODE='talos-cp-1.<lab domain>'
+
+# 3. dry run shows what changes (images, removed APIs)
+talosctl -n "$NODE" upgrade-k8s --to <version> --dry-run
+
+# 4. upgrade (rolls control plane, then kubelets on all nodes)
+talosctl -n "$NODE" upgrade-k8s --to <version>
+
+# 5. verify
+kubectl get nodes -o wide
+talosctl -n "$NODE" health
+```
