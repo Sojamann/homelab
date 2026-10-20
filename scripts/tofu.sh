@@ -124,6 +124,14 @@ case "$layer" in
     TF_VAR_garage_metrics_token="$(vault_require secrets/vault.yml garage_metrics_token)"
     export TF_VAR_garage_metrics_token
 
+    # VolSync's restic password and its Garage key -- see flux/docs/volsync.md.
+    for key in volsync_restic_password garage_volsync_key_id \
+      garage_volsync_secret_key; do
+      value="$(vault_require secrets/vault.yml "$key")"
+      export "TF_VAR_$key=$value"
+    done
+    unset value
+
     # Pocket ID clients, issued by Pocket ID at registration.
     for key in grafana_oidc_client_id grafana_oidc_client_secret \
       bao_oidc_client_id bao_oidc_client_secret; do

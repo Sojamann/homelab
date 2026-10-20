@@ -9,6 +9,9 @@ Proxmox nodes: where guest disks live is baked in at node install.
 
 - 4 bays, 2 populated -- 2x 4TB HDD, one mirror vdev, 4TB usable
 - 2 M.2 NVMe slots, 1 populated -- 500GB, no redundancy
+- onboard 64GB eMMC (`mmcblk0`) -- TrueNAS boot pool, replaces UGOS. Its
+  hardware boot partitions `mmcblk0boot0/1` (4 MiB each, read-only) show up
+  as 2 unassigned SSDs -- expected, never add them to a pool
 - 2x 10GbE, **both in use** -- one per VLAN, not bonded: different networks,
   not more bandwidth, so no LACP
 - Static `10.212.2.150` on Trusted, below the physical range `.151-.159` and

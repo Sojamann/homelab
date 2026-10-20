@@ -139,6 +139,26 @@ resource "vault_kv_secret_v2" "vaultwarden" {
 }
 
 ####################################
+#             VOLSYNC              #
+####################################
+
+# One restic password and one Garage key for every backed-up PVC; each app's
+# ExternalSecret reads this and adds its own repository path. From the vault,
+# not generated: a restore from a laptop needs the password without a cluster.
+resource "vault_kv_secret_v2" "volsync" {
+  mount = vault_mount.kv.path
+  name  = "volsync/restic"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    password   = var.volsync_restic_password
+    access-key = var.garage_volsync_key_id
+    secret-key = var.garage_volsync_secret_key
+  })
+}
+
+####################################
 #               ZOT                #
 ####################################
 

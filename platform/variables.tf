@@ -66,6 +66,24 @@ variable "garage_metrics_token" {
   sensitive   = true
 }
 
+variable "volsync_restic_password" {
+  description = "restic password for every VolSync repository in Garage"
+  type        = string
+  sensitive   = true
+}
+
+variable "garage_volsync_key_id" {
+  description = "Garage key id on the k8s-backups bucket"
+  type        = string
+  sensitive   = true
+}
+
+variable "garage_volsync_secret_key" {
+  description = "Garage secret key on the k8s-backups bucket"
+  type        = string
+  sensitive   = true
+}
+
 variable "grafana_oidc_client_id" {
   description = "Grafana's client id in Pocket ID"
   type        = string
