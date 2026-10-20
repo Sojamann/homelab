@@ -147,9 +147,10 @@ speed:
 | `bulk` | csi-driver-nfs | `slow` | RWX    | a directory per PV, in one export |
 
 `fast` is default and is where anything latency-bound goes -- databases,
-indexes, the OpenBao raft volume. It is also a single unmirrored NVMe with no
-restore path, so what must survive the drive goes on `bulk`, where the mirror
-and the snapshot task are.
+indexes, the OpenBao raft volume. It is also a single unmirrored NVMe. What
+cannot be rebuilt gets a VolSync backup beside its PVC, restic into Garage on
+`slow` -- see the apps repo's `docs/volsync.md`; what must stay on the mirror
+outright goes on `bulk`.
 
 The NAS half is built by hand and documented in [machines/truenas.md](../machines/truenas.md)
 
@@ -184,6 +185,14 @@ different one at each end:
 | set to         | `false`                        | `true`                                     |
 | mechanism      | `zfs snapshot`                 | `zfs send \| recv`                          |
 | cost           | instant, ~0 bytes              | slow, full size                            |
+
+**The detached restore does not work on this pool.** `fast` is encrypted, and
+TrueNAS refuses the driver's `send | recv` without properties (*"Destination
+dataset must be encrypted"*), so a PVC from a VolumeSnapshot stays `Pending`.
+Snapshots themselves work; rolling back to one is `zfs rollback` on the NAS.
+VolSync sidesteps it with volume clones (`detachedVolumesFromVolumes` unset, so
+a plain `zfs clone`) and restores with `Direct`. Turning detached restores off
+would fix it at the price below.
 
 Cheap snapshots so that taking one before something destructive is free.
 Detached restores because the alternative is `zfs clone`, and a clone pins its
@@ -262,7 +271,8 @@ kubectl -n flux-system get fluxinstance flux
   until the snapshot goes. On a pool the guests boot from, a forgotten
   snapshot on a write-heavy PVC is a pool-full incident. Nothing prunes them.
 - **`reclaimPolicy: Delete`.** `kubectl delete pvc` destroys the data, now,
-  with no undo and no backup behind it. The alternative -- `Retain` -- trades
+  with no undo -- only a VolSync backup survives it, and only for the PVCs
+  that have one. The alternative -- `Retain` -- trades
   that for orphans nothing reaps on a pool with 500GB in it, and for a
   recreated PVC silently binding a new empty volume next to the old one.
 - **The storage path has no authentication** -- no CHAP equivalent, no TLS, so

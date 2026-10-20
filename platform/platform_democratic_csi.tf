@@ -132,6 +132,9 @@ resource "helm_release" "democratic_csi" {
         # `true` makes the restore a send/recv into an independent zvol
         # instead. It is slow and costs the volume's full size, which is the
         # right place to pay: restores are rare, snapshots are not.
+        #
+        # TrueNAS currently refuses that send/recv on the encrypted pool, so
+        # restoring a snapshot into a PVC fails -- see README.md, Snapshots.
         detachedVolumesFromSnapshots = "true"
       }
 

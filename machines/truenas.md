@@ -130,7 +130,8 @@ inherit the pool-root properties above, which is the only reason those matter
 for `fast`. Nor is there a snapshot task on `fast`: the driver takes its own
 through `VolumeSnapshot`, and a snapshot it does not know about blocks the zvol
 destroy behind a PVC, which then sits in `Terminating`. A snapshot there would
-protect against you anyway, not against the drive.
+protect against you anyway, not against the drive. The PVCs' backup is VolSync
+into `slow/garage` instead -- see [S3 (Garage)](#s3-garage).
 
 `slow/k8s-csi` is created here, and that asymmetry is the second CSI driver:
 csi-driver-nfs has no API to the NAS and no concept of a dataset. It mounts one
@@ -386,6 +387,7 @@ platform at `kv/<ns>/<app>/s3`.
 | Bucket | Quota | Consumer |
 |--------|-------|----------|
 | `proxmox-backups` | 300G | PBS datastore, see [guests](../guests/README.md#backups) |
+| `k8s-backups`     | 50G  | VolSync, restic per PVC, see [volsync](https://github.com/Sojamann/homelab-apps/blob/main/docs/volsync.md) |
 
 ## Backup Layers
 
@@ -397,8 +399,11 @@ platform at `kv/<ns>/<app>/s3`.
    restores a configuration into a Home Assistant that is already running, and
    it is the layer that survives PBS. Scheduled and encrypted inside the
    appliance, not here.
-4. **Offsite (B2)** -- survives losing the NAS. **Not built.** `users/` goes
+4. **VolSync on Garage (`k8s-backups`)** -- restic, nightly, for the `fast`
+   PVCs that cannot be rebuilt. Survives a dead NVMe, a lost `fast` pool and a
+   deleted PVC -- the cases ZFS snapshots on `fast` cannot cover, since they
+   live in the zvol.
+5. **Offsite (B2)** -- survives losing the NAS. **Not built.** `users/` goes
    first when it is.
 
-Until 2 exists, `fast` has no restore path. Until 4 exists, one fire takes the
-guests and every backup of them.
+Until 5 exists, one fire takes the guests, the PVCs and every backup of them.

@@ -8,6 +8,13 @@
 - apps (`machines/truenas/apps/`): after merging a Renovate bump, edit the app
   in TrueNAS and set the new tag -- nothing applies it automatically
 
+## Backups (VolSync)
+- `kubectl get replicationsource -A` -- every LAST SYNC within a day; the
+  `VolSyncBackupFailing` alert is the same check, pushed
+- Garage: `k8s-backups` well under its 50G quota
+- after removing an app for good, delete its `k8s-backups/<ns>/<pvc>/` prefix
+  -- see flux/docs/volsync.md
+
 ## Proxmox
 - check for updates (`apt update && apt full-upgrade`), reboot on new kernel
 - check backup jobs succeeded
