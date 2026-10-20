@@ -381,8 +381,9 @@ garage key create <name>                          # shown once
 garage bucket allow --read --write <name> --key <name>
 ```
 
-Never `--owner`. Key into `secrets/vault.yml`; k8s consumers get it via
-platform at `kv/<ns>/<app>/s3`.
+Never `--owner`. Key into `secrets/vault.yml` as `garage_<name>_key_id` /
+`garage_<name>_secret_key`, which is what `mise run s3 <name> <aws s3 args>`
+reads; k8s consumers get it via platform at `kv/<ns>/<app>/s3`.
 
 | Bucket | Quota | Consumer |
 |--------|-------|----------|

@@ -23,6 +23,7 @@ mise run machine-config
 mise run guests plan
 mise run cluster plan
 mise run platform plan
+mise run s3 volsync ls s3://k8s-backups/   # aws s3 against Garage, key from the vault
 ```
 
 ### Updates

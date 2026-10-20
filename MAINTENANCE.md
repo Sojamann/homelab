@@ -12,6 +12,7 @@
 - `kubectl get replicationsource -A` -- every LAST SYNC within a day; the
   `VolSyncBackupFailing` alert is the same check, pushed
 - Garage: `k8s-backups` well under its 50G quota
+  (`mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups/`)
 - after removing an app for good, delete its `k8s-backups/<ns>/<pvc>/` prefix
   -- see flux/docs/volsync.md
 
