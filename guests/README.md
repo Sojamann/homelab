@@ -101,18 +101,22 @@ ssh -i secrets/guests-ssh-key ubuntu@vpn.lab.<domain>
 
 1. **Install.** Console on VM 162: address `10.212.2.162/24`, gateway
    `10.212.2.1`, hostname `pbs.lab.<domain>`, onto `scsi0` (20G, the OS).
-2. **Cache disk.** `scsi1` (8G) is the S3 datastore's local cache: format it,
-   mount it at `/mnt/datastore/pbs-cache`. PBS fills whatever it gets, so the
-   disk is the limit. Grow in `guest_vm_pbs.tf`, then `growpart` + `resize2fs`.
-3. **Datastore.** The backups live in Garage, bucket `pbs` -- see
+2. **Cache disk.** `scsi1` (8G) is the S3 datastore's local cache:
+   *Administration* -> *Storage / Disks* -> *Directory* -> *Create*, ext4,
+   name `pbs-cache`, *Add as Datastore* off -- mounts at
+   `/mnt/datastore/pbs-cache`. PBS fills whatever it gets, so the disk is the
+   limit. Grow in `guest_vm_pbs.tf`, then `growpart` + `resize2fs`.
+3. **Datastore.** The backups live in Garage, bucket `proxmox-backups` -- see
    [machines/truenas.md](../machines/truenas.md#s3-garage). *Configuration* ->
-   *S3 Endpoints* -> *Add*: `s3.lab.<domain>`, port `3900`, region `lab`,
-   path-style, key `garage_pbs_*` from the vault. Then *Add Datastore*, backend
-   S3, name `pbs`, cache path from step 2.
+   *S3 Endpoints* -> *Add*: id `garage`, `s3.lab.<domain>`, port `3900`,
+   region `lab`, path-style, key `garage_pbs_*` from the vault. Then *Add
+   Datastore*: type S3, name `proxmox-backups`, endpoint `garage`, bucket
+   `proxmox-backups`, cache path from step 2.
 4. **Token.** User `backup@pbs`, token `backup@pbs!lab`, permission
-   **DatastoreBackup** on `/datastore/pbs`
+   **DatastoreBackup** on `/datastore/proxmox-backups`
 5. **Storage entry.** *Datacenter* -> *Storage* -> *Add* -> *Proxmox Backup
-   Server*, once for the whole cluster.
+   Server*, once for the whole cluster, namespace `lab`. Create the namespace
+   first (*Content* -> *Add Namespace*): the token can't.
 6. **Job.** *Datacenter* -> *Backup*, mode *snapshot*, notify on failure,
    fleecing on if guest disks sit on slow storage.
    **Exclude VM 162 from the job**: it cannot restore itself, and it would be
@@ -131,10 +135,17 @@ ssh -i secrets/guests-ssh-key ubuntu@vpn.lab.<domain>
    PBS's realm can't map groups, so each admin is created by hand and
    autocreate stays off. `root@pam` stays as break-glass.
 
-**Moving an existing datastore** (how the iSCSI zvol was retired): create
-the S3 one under a new name, run a local *Sync Job* old -> new, repoint the
-storage entry, token ACL and job, test a restore, then remove the old datastore. Same
-encryption key on both sides, or nothing dedups.
+**Moving an existing datastore** (how the iSCSI one, `pbs`, was retired):
+
+1. Create the new one (steps 2-4), token ACL on it too.
+2. On the new store: add namespace `lab`, then *Sync Jobs* -> *Add Pull*,
+   source *Local* `pbs`, local
+   owner `backup@pbs!lab` -- else the token can't extend the synced groups.
+3. New PVE storage entry for it with the **same encryption key** (copy
+   `/etc/pve/priv/storage/<old>.enc` to `<new>.enc`) -- else no dedup, and the
+   synced backups don't restore. Point the job at it.
+4. Recreate prune/GC/verify on the new store, they're per datastore.
+5. Restore test, then remove the old storage entry, then the old datastore.
 
 Schedules, and the order is the point -- prune has to run after the backup it
 should count, and GC is the expensive one:

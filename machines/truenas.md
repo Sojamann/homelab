@@ -382,7 +382,7 @@ platform at `kv/<ns>/<app>/s3`.
 
 | Bucket | Quota | Consumer |
 |--------|-------|----------|
-| `pbs`  | 300G  | PBS datastore, see [guests](../guests/README.md#backups) |
+| `proxmox-backups` | 300G | PBS datastore, see [guests](../guests/README.md#backups) |
 
 ## Backup Layers
 
