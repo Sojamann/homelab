@@ -153,7 +153,7 @@ should count, and GC is the expensive one:
 | Job    | Where            | Schedule                        |
 |--------|------------------|---------------------------------|
 | Backup | PVE, *Backup*    | `23:00` daily                   |
-| Prune  | PBS, on the datastore | `04:00` daily              |
+| Prune  | PBS, on the datastore | `04:00` daily, root + full depth, keep last 3, daily 7, weekly 4, monthly 6 |
 | GC     | PBS, on the datastore | `sun 05:00` weekly         |
 | Verify | PBS, on the datastore | `sat 22:00` weekly, skip verified |
 
