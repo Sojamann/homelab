@@ -100,11 +100,11 @@ in a LB-IPAM pool of one selected onto this Gateway's generated Service, and
 layers therefore agree on the name `Gateway/lab` in namespace `gateway`, and
 nothing checks that they still do.
 
-A non-HTTP protocol gets its own port instead: a TCP listener has no hostname,
-so the port alone is the match, and each is open to one namespace. Today that
-is `:22000` for syncthing (`TCPRoute` in the apps repo). Any `app.` name
-reaches it, which saves a DNS record and costs nothing a port number would
-not.
+A non-HTTP protocol gets its own port instead: a TCP or UDP listener has no
+hostname, so the port alone is the match, and each is open to one namespace.
+Today that is `:22000` TCP and UDP for syncthing (`TCPRoute` and `UDPRoute` in
+the apps repo). Any `app.` name reaches it, which saves a DNS record and costs
+nothing a port number would not.
 
 ## Secrets
 
