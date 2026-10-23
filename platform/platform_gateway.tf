@@ -93,6 +93,23 @@ resource "kubectl_manifest" "gateway" {
           }
           allowedRoutes = { namespaces = { from = "All" } }
         },
+        # Syncthing's sync protocol. A TCP listener has no hostname, so the
+        # port is the whole match -- hence one namespace, not `All`. TCP only:
+        # the UDPRoute CRD is not installed, and syncthing falls back to TCP.
+        {
+          name     = "syncthing"
+          protocol = "TCP"
+          port     = 22000
+          allowedRoutes = {
+            kinds = [{ kind = "TCPRoute" }]
+            namespaces = {
+              from = "Selector"
+              selector = {
+                matchLabels = { "kubernetes.io/metadata.name" = "syncthing" }
+              }
+            }
+          }
+        },
       ]
     }
   })

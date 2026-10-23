@@ -112,6 +112,7 @@ Rules:
 ```
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
+│   └── syncthing/   a static PV, made by hand -- see below
 ├── garage/          S3, see S3 (Garage)
 │   ├── meta         metadata DB
 │   └── data         object blocks
@@ -176,6 +177,18 @@ atomic), not one snapshot of the tree: each user rolls back and browses
 `k8s-csi` takes share type **Generic** (POSIX), owner `root:root`, not the SMB
 preset -- nothing reaches it over SMB. Nothing below the root is set by hand:
 the driver creates each PV directory and `chown`s it itself.
+
+The exception is `syncthing/`, the household's synced files, bound as a static
+`Retain` PV so no PVC delete can take it (see the apps repo's
+`docs/syncthing.md`). The driver does not create what it did not provision:
+
+```sh
+mkdir /mnt/slow/k8s-csi/syncthing && chown 1000:1000 /mnt/slow/k8s-csi/syncthing
+```
+
+Personal files live there, not in `users/<name>/files` -- that share stays as
+the way to drop something on the NAS by hand. Do not keep the same files in
+both.
 
 ACLs -- both `users` levels created with the **SMB preset**:
 

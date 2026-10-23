@@ -18,7 +18,7 @@ flowchart BT
   subgraph platform["platform (this layer)"]
     storage["democratic-csi + csi-driver-nfs<br/>sc/fast · sc/bulk"]
     gitops["flux-operator + FluxInstance<br/>Secret/cluster-vars"]
-    door["cert-manager + Gateway<br/>*.app.&lt;domain&gt;, one wildcard cert"]
+    door["cert-manager + Gateway<br/>*.app.&lt;domain&gt;, one wildcard cert<br/>:22000 TCP, syncthing"]
     secrets["OpenBao + external-secrets<br/>kv/&lt;ns&gt;/&lt;app&gt;/&lt;key&gt;"]
   end
 
@@ -99,6 +99,12 @@ in a LB-IPAM pool of one selected onto this Gateway's generated Service, and
 [network](../network/README.md) points the `app.` wildcard record at it. Three
 layers therefore agree on the name `Gateway/lab` in namespace `gateway`, and
 nothing checks that they still do.
+
+A non-HTTP protocol gets its own port instead: a TCP listener has no hostname,
+so the port alone is the match, and each is open to one namespace. Today that
+is `:22000` for syncthing (`TCPRoute` in the apps repo). Any `app.` name
+reaches it, which saves a DNS record and costs nothing a port number would
+not.
 
 ## Secrets
 

@@ -139,6 +139,35 @@ resource "vault_kv_secret_v2" "vaultwarden" {
 }
 
 ####################################
+#            SYNCTHING             #
+####################################
+
+# Both generated: the GUI login is set from here on every start, and the API
+# key is what Prometheus presents. Read the password with
+# `kubectl -n syncthing get secret syncthing -o jsonpath='{.data.gui-password}' | base64 -d`.
+resource "random_password" "syncthing_gui" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "syncthing_api_key" {
+  length  = 32
+  special = false
+}
+
+resource "vault_kv_secret_v2" "syncthing" {
+  mount = vault_mount.kv.path
+  name  = "syncthing/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    gui-password = random_password.syncthing_gui.result
+    api-key      = random_password.syncthing_api_key.result
+  })
+}
+
+####################################
 #             VOLSYNC              #
 ####################################
 
