@@ -3,7 +3,7 @@
 
 locals {
   # renovate: datasource=docker depName=quay.io/jetstack/charts/cert-manager
-  cert_manager_version   = "v1.21.2" # chart == appVersion
+  cert_manager_version   = "v1.21.3" # chart == appVersion
   cert_manager_namespace = "cert-manager"
 }
 
