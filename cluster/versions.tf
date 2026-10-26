@@ -56,7 +56,7 @@ terraform {
     # cluster_nodes.tf. Read-only: this layer never creates a VM.
     proxmox = {
       source  = "bpg/proxmox"
-      version = "~> 0.116"
+      version = "~> 0.118"
     }
 
     # One record: the VIP. Same provider and key as the other two layers.
