@@ -105,3 +105,14 @@ variable "bao_oidc_client_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "tailscale_operator_client_id" {
+  description = "The tailscale operator's OAuth client id"
+  type        = string
+}
+
+variable "tailscale_operator_client_secret" {
+  description = "The tailscale operator's OAuth client secret -- shown once, at creation"
+  type        = string
+  sensitive   = true
+}

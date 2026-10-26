@@ -188,6 +188,25 @@ resource "vault_kv_secret_v2" "volsync" {
 }
 
 ####################################
+#            TAILSCALE             #
+####################################
+
+# The operator's OAuth client, not the network layer's: this one may only mint
+# keys for `tag:k8s-operator` and the proxies under it. Issued in the tailscale
+# console, so it arrives through `secrets/vault.yml`.
+resource "vault_kv_secret_v2" "tailscale_operator" {
+  mount = vault_mount.kv.path
+  name  = "tailscale/operator"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    client-id     = var.tailscale_operator_client_id
+    client-secret = var.tailscale_operator_client_secret
+  })
+}
+
+####################################
 #               ZOT                #
 ####################################
 

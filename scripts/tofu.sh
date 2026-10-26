@@ -133,6 +133,13 @@ case "$layer" in
     done
     unset value
 
+    # The tailscale operator's OAuth client, issued in the tailscale console.
+    for key in tailscale_operator_client_id tailscale_operator_client_secret; do
+      value="$(vault_require secrets/vault.yml "$key")"
+      export "TF_VAR_$key=$value"
+    done
+    unset value
+
     # Pocket ID clients, issued by Pocket ID at registration.
     for key in grafana_oidc_client_id grafana_oidc_client_secret \
       bao_oidc_client_id bao_oidc_client_secret; do

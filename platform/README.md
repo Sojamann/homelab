@@ -65,6 +65,8 @@ Vaultwarden and Grafana values it only carries: they are written into OpenBao an
 | `TF_VAR_grafana_oidc_client_secret`   | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_bao_oidc_client_id`           | `secrets/vault.yml` | OpenBao's Pocket ID client            |
 | `TF_VAR_bao_oidc_client_secret`       | `secrets/vault.yml` | its secret                            |
+| `TF_VAR_tailscale_operator_client_id` | `secrets/vault.yml` | the tailscale operator's OAuth client |
+| `TF_VAR_tailscale_operator_client_secret` | `secrets/vault.yml` | its secret                        |
 | `VAULT_TOKEN`                         | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
 
 > the terraform state is committed and encrypted.
