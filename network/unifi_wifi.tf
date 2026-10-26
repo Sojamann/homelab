@@ -23,12 +23,16 @@ resource "unifi_wlan" "trusted" {
   passphrase = var.wifi_trusted_passphrase
 
   # WPA3 where the client can, WPA2 where it cannot. 6GHz requires WPA3, so
-  # dropping transition mode here would also drop the 6GHz band below.
+  # dropping transition mode would rule out adding that band back.
   wpa3_support    = true
   wpa3_transition = true
   pmf_mode        = "optional"
 
-  wlan_bands = ["2g", "5g", "6g"]
+  # 2.4GHz only, matching the controller. The provider defaults `no2ghz_oui`
+  # on, which refuses 2.4GHz to phones and laptops by vendor -- on a 2.4GHz-only
+  # SSID that locks them out entirely.
+  wlan_bands = ["2g"]
+  no2ghz_oui = false
 
   user_group_id = data.unifi_user_group.default.id
   ap_group_ids  = [data.unifi_ap_group.default.id]

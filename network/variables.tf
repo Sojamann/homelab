@@ -43,3 +43,8 @@ variable "wifi_iot_passphrase" {
   type        = string
   sensitive   = true
 }
+
+variable "tailscale_admins" {
+  description = "Comma-separated tailscale logins of group:admin"
+  type        = string
+}

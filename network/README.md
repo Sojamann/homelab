@@ -131,8 +131,38 @@ Remote access is tailscale (SaaS). The router is a guest -- `vpn`, VM 160, see
 |---------------|--------------------------------------------------------|
 | routes        | Trusted `10.212.2.0/24`, k8s `10.212.4.0/24`, auto-approved for `tag:lab-router` |
 | exit node     | `tag:lab-router`, auto-approved; off until a client picks it |
-| access        | every member to both routes, the internet via the exit node, and their own devices |
 | DNS           | MagicDNS on; split DNS sends `lab.` and `app.` to `10.212.2.1` |
+
+People are groups, machines are tags. Personal devices stay untagged and are
+never a grant destination, so nothing on the tailnet can open a connection to
+one. A public box carries `tag:public` (risk class, shared baseline) plus a tag
+for what it runs (its own holes).
+
+| Source         | Destination                         | Ports              |
+|----------------|-------------------------------------|--------------------|
+| `group:admin`  | both routes, exit node, `tag:public` | all               |
+| `group:family` | `lab-dns` `10.212.2.1`              | tcp/udp 53         |
+| `group:family` | `lab-ingress` `10.212.4.200`        | tcp 80, 443; udp 443 |
+| `group:family` | `home-assistant` `10.212.2.161`     | tcp 8123           |
+| `group:family` | exit node                           | all                |
+| `tag:k8s`      | `tag:public`                        | tcp 9100           |
+| `tag:k8s`      | `tag:dhs`                           | tcp 5432           |
+
+```mermaid
+flowchart LR
+  admin[group:admin] -->|all| routes[Trusted + k8s routes]
+  admin -->|all| public[tag:public]
+  admin & family[group:family] --> exit[exit node]
+  family -->|53 / 80,443 / 8123| front[dns, ingress, home assistant]
+  k8s[tag:k8s] -->|9100| public
+  k8s -->|5432| dhs[tag:dhs]
+  public -.-|same box| dhs
+```
+
+Nothing originates from `tag:public`, `tag:dhs` or `tag:lab-router`.
+`group:admin` comes from the vault (`tailscale_admins`); `group:family` is
+empty until someone joins. Guests get the box by node sharing, not membership
+-- not set up yet.
 
 All of k8s being routed includes the NVMe-oF listener. It stays closed because
 the router SNATs to `10.212.2.160`, a Trusted address, which
@@ -147,7 +177,7 @@ the router SNATs to `10.212.2.160`, a Trusted address, which
 | `unifi_dns.tf`      | the address table, one `A` record per entry, and the `app.` wildcard |
 | `unifi_firewall.tf` | the k8s allow list, the default block, and their order |
 | `unifi_wifi.tf`     | the two SSIDs -- trusted and IoT, named from the vault |
-| `tailscale_policy.tf` | the tailnet policy -- tags, auto-approved routes, grants |
+| `tailscale_policy.tf` | the tailnet policy -- groups, tags, hosts, auto-approved routes, grants |
 | `tailscale_dns.tf`  | MagicDNS and the split DNS for `lab.` and `app.`    |
 | `providers.tf`      | the controller URL, and the tailnet's OAuth client  |
 
