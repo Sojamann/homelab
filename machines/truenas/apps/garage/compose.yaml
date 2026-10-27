@@ -6,7 +6,7 @@
 #   :3903  admin API   Trusted; on k8s only /metrics
 services:
   garage:
-    image: dxflrs/garage:v2.4.1
+    image: dxflrs/garage:v2.5.0
     network_mode: host
     restart: unless-stopped
     configs:
