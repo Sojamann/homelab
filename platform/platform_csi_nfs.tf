@@ -1,7 +1,7 @@
 # The second CSI driver: a directory per PV on the NAS, over NFS.
 locals {
   # renovate: datasource=helm depName=csi-driver-nfs registryUrl=https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
-  csi_nfs_version = "4.13.5" # chart == appVersion
+  csi_nfs_version = "4.13.6" # chart == appVersion
 
   csi_nfs_share = "/mnt/slow/k8s-csi"
 }
