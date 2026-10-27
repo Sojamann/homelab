@@ -67,6 +67,9 @@ Vaultwarden and Grafana values it only carries: they are written into OpenBao an
 | `TF_VAR_bao_oidc_client_secret`       | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_tailscale_operator_client_id` | `secrets/vault.yml` | the tailscale operator's OAuth client |
 | `TF_VAR_tailscale_operator_client_secret` | `secrets/vault.yml` | its secret                        |
+| `TF_VAR_tailnet_domain`               | `secrets/vault.yml` | `cluster-vars`, tailnet names         |
+| `TF_VAR_dhs_backup_user`              | `secrets/vault.yml` | DHS's postgres backup role            |
+| `TF_VAR_dhs_backup_password`          | `secrets/vault.yml` | its password                          |
 | `VAULT_TOKEN`                         | `secrets/vault.yml` | `bao_root_token`, configuring OpenBao |
 
 > the terraform state is committed and encrypted.

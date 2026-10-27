@@ -106,6 +106,22 @@ variable "bao_oidc_client_secret" {
   sensitive   = true
 }
 
+variable "tailnet_domain" {
+  description = "The tailnet's MagicDNS suffix, `<tailnet>.ts.net`"
+  type        = string
+}
+
+variable "dhs_backup_user" {
+  description = "The read-only postgres role on the DHS box that the cluster dumps with"
+  type        = string
+}
+
+variable "dhs_backup_password" {
+  description = "Its password"
+  type        = string
+  sensitive   = true
+}
+
 variable "tailscale_operator_client_id" {
   description = "The tailscale operator's OAuth client id"
   type        = string

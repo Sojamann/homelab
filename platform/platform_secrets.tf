@@ -207,6 +207,24 @@ resource "vault_kv_secret_v2" "tailscale_operator" {
 }
 
 ####################################
+#               DHS                #
+####################################
+
+# The backup role on the DHS box's postgres, created there by hand -- see
+# flux/docs/dhs.md. Read-only; the cluster dumps through the tailnet.
+resource "vault_kv_secret_v2" "dhs_backup" {
+  mount = vault_mount.kv.path
+  name  = "dhs/backup"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    user     = var.dhs_backup_user
+    password = var.dhs_backup_password
+  })
+}
+
+####################################
 #               ZOT                #
 ####################################
 

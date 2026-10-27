@@ -140,6 +140,18 @@ case "$layer" in
     done
     unset value
 
+    # The tailnet's MagicDNS suffix, into `cluster-vars` -- it names the
+    # tailnet, and the apps repo is public.
+    TF_VAR_tailnet_domain="$(vault_require secrets/vault.yml tailnet_domain)"
+    export TF_VAR_tailnet_domain
+
+    # DHS's postgres backup role, created by hand on that box.
+    for key in dhs_backup_user dhs_backup_password; do
+      value="$(vault_require secrets/vault.yml "$key")"
+      export "TF_VAR_$key=$value"
+    done
+    unset value
+
     # Pocket ID clients, issued by Pocket ID at registration.
     for key in grafana_oidc_client_id grafana_oidc_client_secret \
       bao_oidc_client_id bao_oidc_client_secret; do

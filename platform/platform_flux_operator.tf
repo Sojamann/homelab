@@ -34,8 +34,8 @@ resource "helm_release" "flux_operator" {
 # Manifests reference `${lab_domain}` and a Kustomization substitutes it at
 # reconcile time via `postBuild.substituteFrom`.
 #
-# Anything the public apps repo needs and may not hold. The two domains, and
-# the Telegram chat id -- which is no credential (the bot token in OpenBao is),
+# Anything the public apps repo needs and may not hold. The two domains, the
+# tailnet's suffix, and the Telegram chat id -- which is no credential (the bot token in OpenBao is),
 # but names a private group and so stays out of a public repo. `acme_email`
 # left with the issuer that wanted it, which is this layer's now.
 resource "kubectl_manifest" "flux_cluster_vars" {
@@ -45,6 +45,7 @@ resource "kubectl_manifest" "flux_cluster_vars" {
     "stringData.lab_domain",
     "stringData.app_domain",
     "stringData.telegram_chat_id",
+    "stringData.tailnet_domain",
   ]
 
   yaml_body = yamlencode({
@@ -58,6 +59,7 @@ resource "kubectl_manifest" "flux_cluster_vars" {
       lab_domain       = var.lab_domain
       app_domain       = var.app_domain
       telegram_chat_id = var.telegram_chat_id
+      tailnet_domain   = var.tailnet_domain
     }
   })
 }
