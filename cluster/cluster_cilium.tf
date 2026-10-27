@@ -9,7 +9,7 @@
 
 locals {
   # renovate: datasource=helm depName=cilium registryUrl=https://helm.cilium.io/
-  cilium_version = "1.20.3"
+  cilium_version = "1.20.4"
 
   ingress_ip = "10.212.4.200"
 
