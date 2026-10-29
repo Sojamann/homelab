@@ -3,7 +3,7 @@ locals {
   # renovate: datasource=docker depName=ghcr.io/controlplaneio-fluxcd/charts/flux-operator
   flux_operator_version = "0.62.1" # chart == operator
   # renovate: datasource=github-releases depName=fluxcd/flux2 extractVersion=^v(?<version>.+)$
-  flux_version = "2.9.6" # the distribution it installs
+  flux_version = "2.10.0" # the distribution it installs
 
   # Public, so no `pullSecret`. The repo is a submodule at ../flux.
   flux_sync_name = "homelab-apps"
