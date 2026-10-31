@@ -14,7 +14,7 @@ mise install
 
 Your workstation needs to reach the physical range on port 22 as `root`. On
 wifi that means being on the Trusted VLAN, and it means
-[Client Device Isolation](../network/README.md#what-actually-bites) is off.
+[Client Device Isolation](../docs/src/networking.md#vlans) is off.
 
 ## macOS 15 (Sequoia): Local Network permission
 
@@ -43,6 +43,6 @@ Nothing to reach yet -- no machine exists at this point. Come back to this once
 only resolves after [network](../network/README.md) has written its A record:
 
 ```sh
-nc -vz dione.lab.<domain> 22
-ssh root@dione.lab.<domain> true
+nc -vz titan.<lab_domain> 22
+ssh root@titan.<lab_domain> true
 ```

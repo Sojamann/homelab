@@ -5,168 +5,13 @@ assumes the network already looks like this, so it comes early -- a machine
 cannot take a static address in a VLAN that does not exist, and re-addressing
 it afterwards is a migration rather than a setting.
 
+What the network looks like and why -- VLANs, address plan, DNS, firewall
+intent, the tailnet policy: [Networking](../docs/src/networking.md).
+
 ```sh
 mise run network plan     # args are forwarded to tofu
+mise run network apply
 ```
-
-## Networks
-
-| Name            | CIDR          | VLAN TAG | DHCP                          | Description          |
-|-----------------|---------------|----------|-------------------------------|----------------------|
-| Guest (Default) | 10.212.0.0/24 | untagged | 10.212.0.6 - 10.212.0.254     | the controller's own |
-| Management      | 10.212.1.0/24 | 10       | 10.212.1.6 - 10.212.1.254     | all network gear     |
-| Trusted         | 10.212.2.0/24 | 20       | 10.212.2.6 - 10.212.2.**149** | all home devices     |
-| IoT             | 10.212.3.0/24 | 30       | 10.212.3.6 - 10.212.3.254     | all IoT devices      |
-| k8s             | 10.212.4.0/24 | 40       | 10.212.4.**100** - 10.212.4.**149** | network of k8s nodes |
-
-`IoT` has client isolation on -- the VLAN keeps it away from everything else,
-and isolation keeps its members away from each other.
-
-Two `BLOCK` policies, order pinned; everything they do not name stays open, so
-both denies have to be explicit. They match connection setup only -- what you
-start *from* Trusted still gets its replies back. `k8s` reaching the NAS is not
-crossing anything: same network, which is why no allow appears here at all.
-
-- all regular devices are in the `Trusted` network and get their IP via DHCP
-- the NAS is `.150`. It gets its own slot at the bottom of the static range
-  because everything else in the lab mounts it, and an address that never moves
-  is worth one wasted number. It is `.150` in `k8s` too, on a second interface
-- physical homelab equipment uses `.151-.159`, statically assigned and
-  deliberately outside the DHCP pool -- which is why that pool stops at `.149`
-- permanent, statically addressed guests -- VMs and containers alike use `.160+`
-- everything else is a normal DHCP client; the few that need a stable address
-  (the TV) get a DHCP reservation inside the pool -- see `unifi_clients.tf`
-
-The `k8s` network is laid out differently, because nothing in it is a person's
-device and almost none of it is a DHCP client:
-
-| Range                       | Holds                                    | Written by |
-|-----------------------------|------------------------------------------|------------|
-| `10.212.4.1`                | gateway, and the nodes' resolver         | controller |
-| `10.212.4.5`                | the Talos VIP -- the Kubernetes endpoint | [cluster](../cluster/README.md) |
-| `10.212.4.10-.12`           | control planes (`talos-cp-1` is `.10`)   | [guests](../guests/README.md) |
-| `10.212.4.13-.19`           | workers                                  | [guests](../guests/README.md) |
-| `10.212.4.100-.149`         | DHCP                                     | controller |
-| `10.212.4.150`              | the NAS, second interface -- all storage | [machines](../machines/README.md) |
-| `10.212.4.200`              | the cluster's gateway -- all of `app.`   | [cluster](../cluster/README.md) |
-| `10.212.4.201-.254`         | `LoadBalancer` services, Cilium LB-IPAM  | [cluster](../cluster/README.md) |
-
-Control planes are `.10-.12` and workers `.13-.19` so that growing to three
-control planes -- one per machine, once there are three machines -- is three
-new VMs and no renumbering.
-
-The NAS is the one thing here that is not a cluster node: a second interface,
-same host octet it takes in Trusted, so that storage never crosses the router.
-The DHCP pool stops at `.149` to leave it free.
-
-## DNS
-
-The zone is `<domain>`, split in two:
-
-| Subdomain      | Contents                              | Shape                                    |
-|----------------|---------------------------------------|------------------------------------------|
-| `lab.<domain>` | infrastructure -- physical hosts, vms | one record per machine, `<name>.lab....`  |
-| `app.<domain>` | hosted services (nextcloud, ...)      | one wildcard onto the cluster's gateway  |
-
-Cloudflare holds the zone but none of these records. Its only job is proving
-domain control to Let's Encrypt, which it does with `_acme-challenge` TXT
-records that exist for seconds at a time -- see
-[bootstrap/cloudflare](../bootstrap/cloudflare.md).
-
-One `A` record per machine, and one per VM. Nothing under `app` is ever
-enumerated -- it is a single wildcard, so adding a service is a kubernetes
-concern rather than a DNS one.
-
-One exception: the NAS has two records, `nas` and `nas-k8s`, one per interface.
-A single name resolving to both addresses would break half the connections, and
-the TrueNAS certificate has to name whichever one is dialled -- both are SANs
-on it.
-
-## k8s firewall
-
-The k8s network runs arbitrary containers pulled from the internet, and Trusted
-holds the NAS and every Proxmox management interface. It is the one place in
-this lab where the permissive option is actually dangerous, and the list of
-things it legitimately needs is two lines long:
-
-| From            | To              | Port        | Why             |
-|-----------------|-----------------|-------------|-----------------|
-| `10.212.4.0/24` | internet        | any         | images, updates |
-| `10.212.4.0/24` | Proxmox hosts   | 9100, 9221  | Prometheus scrapes the exporters -- `metrics-allow-proxmox`, ordered above the deny |
-| `10.212.4.0/24` | `10.212.2.161`  | 8123        | Prometheus scrapes Home Assistant -- `metrics-allow-home-assistant`, ordered above the deny |
-| `10.212.4.0/24` | anything else   | --          | denied          |
-
-The two allows that used to be here, 4420 and 443 to the NAS, are gone: the NAS
-has an interface in this network, so storage never crosses the zone pair. The
-scrape cannot be arranged away the same fashion -- the hosts have no interface
-in k8s -- so it is a narrow allow rather than an abandoned policy: named
-addresses, two read-only ports, and the exporters bind the Trusted address
-only. Keep the list this short.
-
-The NAS being in here is the cost. NVMe-oF has no authentication and
-`nvme connect` no TLS, so reaching `10.212.4.150:4420` is enough to attach a
-volume, and two things must both hold to prevent it:
-
-- the listener **binds the k8s address only** -- set on the NAS, see
-  [machines/truenas](../machines/truenas.md#shares-and-services)
-- `nvmeof-deny-cross-vlan` **blocks the other four networks** from routing to
-  it. Necessary because `Internal -> Internal` ends in the predefined allow-all
-  and Trusted -> k8s stays open by design.
-
-Garage (S3) on `:3900`/`:3903` answers on both NAS addresses, keyed per
-bucket. `s3-deny-cross-vlan` keeps Guest, Management and IoT off both; Trusted
-(and so the tailnet) and k8s are its clients.
-
-The NAS binds everything else -- SMB, ssh -- to Trusted. The exception is the
-TrueNAS API, which shares a listener with the web UI, so the login page is
-reachable from k8s: an accepted trade, see
-[platform](../platform/README.md#known-trade-offs).
-
-## Tailnet
-
-Remote access is tailscale (SaaS). The router is a guest -- `vpn`, VM 160, see
-[guests](../guests/README.md#vpn) -- but what it may do is decided here:
-
-| What          | Value                                                  |
-|---------------|--------------------------------------------------------|
-| routes        | Trusted `10.212.2.0/24`, k8s `10.212.4.0/24`, auto-approved for `tag:lab-router` |
-| exit node     | `tag:lab-router`, auto-approved; off until a client picks it |
-| DNS           | MagicDNS on; split DNS sends `lab.` and `app.` to `10.212.2.1` |
-
-People are groups, machines are tags. Personal devices stay untagged and are
-never a grant destination, so nothing on the tailnet can open a connection to
-one. A public box carries `tag:public` (risk class, shared baseline) plus a tag
-for what it runs (its own holes).
-
-| Source         | Destination                         | Ports              |
-|----------------|-------------------------------------|--------------------|
-| `group:admin`  | both routes, exit node, `tag:public` | all               |
-| `group:family` | `lab-dns` `10.212.2.1`              | tcp/udp 53         |
-| `group:family` | `lab-ingress` `10.212.4.200`        | tcp 80, 443; udp 443 |
-| `group:family` | `home-assistant` `10.212.2.161`     | tcp 8123           |
-| `group:family` | exit node                           | all                |
-| `tag:k8s`      | `tag:public`                        | tcp 9100           |
-| `tag:k8s`      | `tag:dhs`                           | tcp 5432           |
-
-```mermaid
-flowchart LR
-  admin[group:admin] -->|all| routes[Trusted + k8s routes]
-  admin -->|all| public[tag:public]
-  admin & family[group:family] --> exit[exit node]
-  family -->|53 / 80,443 / 8123| front[dns, ingress, home assistant]
-  k8s[tag:k8s] -->|9100| public
-  k8s -->|5432| dhs[tag:dhs]
-  public -.-|same box| dhs
-```
-
-Nothing originates from `tag:public`, `tag:dhs` or `tag:lab-router`.
-`group:admin` comes from the vault (`tailscale_admins`); `group:family` is
-empty until someone joins. Guests get the box by node sharing, not membership
--- not set up yet.
-
-All of k8s being routed includes the NVMe-oF listener. It stays closed because
-the router SNATs to `10.212.2.160`, a Trusted address, which
-`nvmeof-deny-cross-vlan` blocks -- so SNAT on the router is load-bearing.
 
 ## What is here
 
@@ -175,7 +20,7 @@ the router SNATs to `10.212.2.160`, a Trusted address, which
 | `unifi_networks.tf` | the VLAN table, and one `unifi_network` per row      |
 | `unifi_clients.tf`  | DHCP reservations -- MAC to fixed address, per network |
 | `unifi_dns.tf`      | the address table, one `A` record per entry, and the `app.` wildcard |
-| `unifi_firewall.tf` | the k8s allow list, the default block, and their order |
+| `unifi_firewall.tf` | the three `BLOCK` policies, the two scrape allows, and their order |
 | `unifi_wifi.tf`     | the two SSIDs -- trusted and IoT, named from the vault |
 | `tailscale_policy.tf` | the tailnet policy -- groups, tags, hosts, auto-approved routes, grants |
 | `tailscale_dns.tf`  | MagicDNS and the split DNS for `lab.` and `app.`    |
@@ -183,22 +28,29 @@ the router SNATs to `10.212.2.160`, a Trusted address, which
 
 **VMs are not in this table.** A guest's record is defined beside the guest, in
 the [guests](../guests/README.md) layer, through this same provider and API
-key.
+key. A name must exist in exactly one of the two layers.
 
-The `app.` wildcard is the exception to that rule**, and the reason is that
-the layer that should own it cannot. Everything under `app.` is served by one
-Gateway in the cluster; the Gateway is written in the apps repo, which Flux
-applies [cluster](../cluster/README.md).
+The `app.` wildcard is the exception to that rule: everything under `app.` is
+one Gateway (`platform/platform_gateway.tf`) on `10.212.4.200`, an LB-IPAM pool
+of one held by `cluster/cluster_cilium.tf`. Both layers come later, and the
+address is fixed, so the record lives here.
+
+Parts set outside tofu:
+
+- the NAS's listener binding, half of the NVMe-oF access control -- see
+  [machines/truenas](../machines/truenas.md#shares-and-services)
+- the `vpn` guest joining the tailnet -- see [guests](../guests/README.md#vpn)
+- the Cloudflare zone -- see [bootstrap/cloudflare](../bootstrap/cloudflare.md)
 
 ## Verify
 
 From a machine on Trusted, once a machine exists:
 
 ```sh
-dig +short dione.lab.<domain>   # -> 10.212.2.156
-dig +short foo.app.<domain>     # -> 10.212.4.200, for any name
+dig +short titan.<lab_domain>   # -> 10.212.2.151
+dig +short foo.<app_domain>     # -> 10.212.4.200, for any name
 ```
 
-If that resolves but nothing connects, the problem is almost certainly 
-the workstation rather than the network see
+If that resolves but nothing connects, the problem is almost certainly
+the workstation rather than the network, see
 [bootstrap/workstation](../bootstrap/workstation.md).

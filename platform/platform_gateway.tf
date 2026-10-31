@@ -26,7 +26,7 @@ resource "kubectl_manifest" "gateway_namespace" {
 # for an app that needs no certificate of its own, and for keeping every
 # hostname but this one out of public Certificate Transparency logs.
 #
-# `*.app.<domain>` covers `foo.app.<domain>` and not `foo.bar.app.<domain>`.
+# `*.<app_domain>` covers `foo.<app_domain>` and not `foo.bar.<app_domain>`.
 # Nesting means a second certificate.
 resource "kubectl_manifest" "wildcard_certificate" {
   depends_on = [

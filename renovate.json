@@ -54,7 +54,7 @@
       "enabled": false
     },
     {
-      "description": "Talos and Kubernetes upgrade one minor at a time (MAINTENANCE.md)",
+      "description": "Talos and Kubernetes upgrade one minor at a time (docs/src/maintenance.md)",
       "matchPackageNames": [
         "siderolabs/talos",
         "kubernetes/kubernetes"

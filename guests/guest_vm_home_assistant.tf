@@ -90,8 +90,8 @@ resource "proxmox_virtual_environment_vm" "home_assistant" {
   # in place, so the image above is install media and nothing more -- but
   # bumping its version mints a new file, which would change `file_id`, replace
   # the disk, and take every pairing, automation and Matter credential with it.
-  # There are no backups yet (see the `+backup` todo), so that is not a
-  # recoverable mistake.
+  # Recoverable only by a restore (PBS, or Home Assistant's own backups), so
+  # not a mistake to make casually.
   #
   # Breaking the link means a version bump re-downloads the image and leaves
   # this VM alone -- which is correct, because a running appliance has long

@@ -102,8 +102,9 @@ resource "unifi_firewall_zone_policy" "metrics_allow" {
 # read-only port, so this gets its own policy and its own address.
 #
 # The token is what actually guards it; the narrowness here only limits who may
-# knock. The scrape filters down to Home Assistant's own health metrics, which
-# is what this hole is justified by -- see flux/infrastructure/configs/ha.
+# knock. No scrape config for it exists in flux/ yet; when one does, it should
+# filter down to Home Assistant's own health metrics, which is what this hole
+# is justified by.
 resource "unifi_firewall_zone_policy" "ha_metrics_allow" {
   name        = "metrics-allow-home-assistant"
   description = "k8s Prometheus may scrape Home Assistant"

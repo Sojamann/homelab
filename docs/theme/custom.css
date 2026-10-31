@@ -1,0 +1,183 @@
+/* Overrides on top of mdBook's stock CSS. Variables are per theme class. */
+
+:root {
+    /* System fonts: nothing to download, native rendering everywhere. */
+    --body-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono-font: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --code-font-size: 0.875em;
+    --content-max-width: 800px;
+    --radius: 6px;
+}
+
+/* Themes: light and navy are the defaults (book.toml); the rest only get
+   fixes where stock contrast is poor. */
+
+.light, html:not(.js) {
+    --fg: #1f2328;
+    --links: #0b5cad;
+    --sidebar-active: #0b5cad;
+    --quote-bg: #f6f8fa;
+    --quote-border: #d0d7de;
+    --table-border-color: #d8dee4;
+    --table-header-bg: #eef1f4;
+    --table-alternate-bg: #f8f9fb;
+    --code-bg: #f3f4f6;
+    --rule: #d8dee4;
+}
+
+.navy {
+    --fg: #c9cde0;
+    --links: #79b8ff;
+    --sidebar-active: #79b8ff;
+    --quote-bg: hsl(226, 20%, 15%);
+    --quote-border: hsl(226, 15%, 25%);
+    --table-border-color: hsl(226, 18%, 22%);
+    --table-header-bg: hsl(226, 22%, 20%);
+    --table-alternate-bg: hsl(226, 23%, 13.5%);
+    --code-bg: hsl(226, 20%, 16%);
+    --rule: hsl(226, 15%, 25%);
+}
+
+.coal {
+    --links: #6cb6ff;
+    --sidebar-active: #6cb6ff;
+    --table-border-color: hsl(200, 7%, 20%);
+    --table-header-bg: hsl(200, 7%, 17%);
+    --code-bg: hsl(200, 7%, 13%);
+    --rule: hsl(200, 7%, 22%);
+}
+
+.ayu {
+    --table-border-color: hsl(210, 25%, 18%);
+    --table-header-bg: hsl(210, 25%, 14%);
+    --code-bg: hsl(210, 25%, 12%);
+    --rule: hsl(210, 25%, 18%);
+}
+
+.rust {
+    --code-bg: hsl(60, 9%, 82%);
+    --rule: hsl(60, 5%, 70%);
+}
+
+/* Typography */
+
+html { font-family: var(--body-font); }
+
+.content main {
+    font-size: 1.65rem;
+    line-height: 1.6;
+}
+.content p, .content ol, .content ul { line-height: 1.6; }
+.content li + li { margin-top: 0.25em; }
+
+.content h1, .content h2, .content h3, .content h4 {
+    line-height: 1.25;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+.content h1 { margin-top: 0.5em; }
+.content h2 {
+    margin-top: 2em;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--rule);
+}
+.content h3 { margin-top: 1.6em; }
+
+.content a:hover { text-decoration: underline; text-underline-offset: 0.15em; }
+
+hr { border: none; border-top: 1px solid var(--rule); }
+
+/* Code: inline code gets a chip, blocks a rounded box. */
+
+:not(pre) > code:not(.hljs),
+:not(pre) > code.hljs {
+    background: var(--code-bg);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+pre > code { border-radius: var(--radius); line-height: 1.5; }
+
+/* Tables: compact, horizontal scroll from mdBook's .table-wrapper. */
+
+.table-wrapper { margin: 1.5em 0; }
+table {
+    margin: 0;
+    font-size: 0.92em;
+    line-height: 1.45;
+}
+table thead { background: var(--table-header-bg); }
+table thead th {
+    padding: 6px 12px;
+    text-align: start;
+    font-weight: 650;
+    border: 1px solid var(--table-border-color);
+}
+table td {
+    padding: 6px 12px;
+    vertical-align: top;
+}
+
+/* Wide matrices (the backups coverage one): smaller type, no wrapping in the
+   header, first column pinned while scrolling sideways. */
+.table-wrapper:has(th:nth-child(7)) table { font-size: 0.82em; }
+.table-wrapper:has(th:nth-child(7)) th { white-space: nowrap; }
+.table-wrapper:has(th:nth-child(7)) :is(th, td):first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    min-width: 14em;
+    background: var(--bg);
+}
+.table-wrapper:has(th:nth-child(7)) thead th:first-child { background: var(--table-header-bg); }
+.table-wrapper:has(th:nth-child(7)) tbody tr:nth-child(2n) td:first-child { background: var(--table-alternate-bg); }
+
+/* Plain blockquotes */
+
+blockquote {
+    margin: 1.5em 0;
+    padding: 0.2em 1.2em;
+    border: none;
+    border-inline-start: 4px solid var(--quote-border);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: var(--quote-bg);
+}
+
+/* Admonitions: `> [!NOTE]` etc., rendered natively by mdBook. Tint the box
+   with its own colour. */
+
+.blockquote-tag {
+    padding: 0.6em 1.2em;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: color-mix(in srgb, var(--admonition) 9%, var(--bg));
+    border-inline-start-color: var(--admonition);
+}
+.blockquote-tag-title {
+    display: flex;
+    align-items: center;
+    margin: 0 0 0.3em;
+    font-weight: 650;
+    color: var(--admonition) !important;
+}
+.blockquote-tag-note      { --admonition: var(--blockquote-note-color); }
+.blockquote-tag-tip       { --admonition: var(--blockquote-tip-color); }
+.blockquote-tag-important { --admonition: var(--blockquote-important-color); }
+.blockquote-tag-warning   { --admonition: var(--blockquote-warning-color); }
+.blockquote-tag-caution   { --admonition: var(--blockquote-caution-color); }
+
+/* Mermaid: mermaid-init.js picks mermaid's dark theme for coal/navy/ayu.
+   Diagrams sit on the page background, centred, and scroll if too wide. */
+
+pre.mermaid {
+    background: transparent;
+    text-align: center;
+    overflow-x: auto;
+    margin: 1.5em 0;
+}
+/* Mermaid's dark theme puts edge labels on grey boxes; use the page colour. */
+:is(.coal, .navy, .ayu) pre.mermaid :is(.edgeLabel, .edgeLabel p, .labelBkg) {
+    background-color: var(--bg) !important;
+}
+:is(.coal, .navy, .ayu) pre.mermaid .edgeLabel rect {
+    fill: var(--bg) !important;
+    opacity: 1 !important;
+}

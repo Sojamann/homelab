@@ -33,7 +33,7 @@ back here -- that is [machines](../machines/README.md).
   | `zone`                       | every layer     | the DNS zone, no `lab.` prefix |
   | `acme_email`                 | machine-config  | certificate registration       |
   | `cloudflare_api_token`       | machine-config, platform | DNS-01, scoped to the one zone |
-  | `terraform_state_passphrase` | network         | 16+ chars, see below           |
+  | `terraform_state_passphrase` | every tofu layer | 16+ chars, encrypts state          |
   | `unifi_api_key`              | network         | from step 1                    |
   | `wifi_trusted_ssid`          | network         | the name, see below            |
   | `wifi_iot_ssid`              | network         | the name, see below            |
@@ -61,13 +61,10 @@ $EDITOR secrets/vault.yml
 ansible-vault encrypt secrets/vault.yml
 ```
 
-`terraform_state_passphrase` is the one entry with no second copy anywhere.
-The network layer's state is committed to this repo encrypted with it, so
-losing it makes that state unreadable in git history as well as in the working
-tree, and the only recovery is to rebuild state from the controller by hand.
-Keep it in a password manager too. It is also exactly as strong as the vault
-password protecting it.
+Put `.vault-pass` and `terraform_state_passphrase` in a password manager too.
+What else lives in `secrets/`, and why the vault password unlocks everything:
+[Access & secrets](../docs/src/access.md#vault).
 
 Nothing outside this file is a credential. There are no passwords in the repo,
-SSH is key-only, and cluster formation stays manual precisely because `pvecm`
-wants root@pam's password.
+SSH is key-only, and Proxmox cluster formation stays manual precisely because
+`pvecm` wants root@pam's password.

@@ -9,6 +9,9 @@ automation tool has no dry run for them worth trusting. This layer repeats
 every time hardware is added -- unlike [bootstrap](../bootstrap/README.md),
 which happens once.
 
+How the machines are used and restored: [Proxmox](../docs/src/platform/proxmox.md),
+[TrueNAS](../docs/src/platform/truenas.md), [Storage](../docs/src/storage.md).
+
 Assumes [network](../network/README.md) is in place. A machine takes a static
 address from a VLAN that has to already exist.
 
@@ -24,7 +27,7 @@ address from a VLAN that has to already exist.
 
 For every node:
 
-- `ssh root@<name>.lab.<domain> true` succeeds from your workstation
+- `ssh root@<name>.<lab_domain> true` succeeds from your workstation
 - `pvecm status` reports `Quorate: Yes`
 - the node is uncommented in `machine-config/inventory/hosts.yml`
 - `secrets/vault.yml` holds `truenas_api_key`, once the NAS exists
@@ -33,18 +36,21 @@ machine-config asserts these, so getting them wrong is loud rather than subtle.
 
 ## Devices
 
-OS installed and ready to be used for it's function.
+OS installed and ready to be used for its function.
 
 | Name      | IP           | Device      | Function     |
 |-----------|--------------|-------------|--------------|
 | nas       | 10.212.2.150 | UGREEN NAS  | NAS          |
 | nas       | 10.212.4.150 | (same box)  | storage, k8s VLAN |
 | Titan     | 10.212.2.151 | ?           | Proxmox Host |
-| Enceladus | 10.212.2.152 | ?           | Proxmox Host |
-| Mimas     | 10.212.2.153 | ?           |              |
-| Rhea      | 10.212.2.154 | ?           |              |
-| Iapetus   | 10.212.2.155 | ?           |              |
-| Dione     | 10.212.2.156 | ASUS Laptop | Proxmox Host |
+| Enceladus | 10.212.2.152 |             | reserved     |
+| Mimas     | 10.212.2.153 |             | reserved     |
+| Rhea      | 10.212.2.154 |             | reserved     |
+| Iapetus   | 10.212.2.155 |             | reserved     |
+| Dione     | 10.212.2.156 | ASUS Laptop | reserved     |
+
+Reserved names do not exist yet; they stay commented out in
+`machine-config/inventory/hosts.yml`.
 
 > names derived from saturn's moons
 

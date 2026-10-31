@@ -20,3 +20,8 @@
 # etcd snapshot from talos upgrades: plaintext dump of every k8s secret
 db.snapshot
 todo.txt
+
+# docs site output, and the mermaid assets scripts/docs.sh writes
+/docs/book/
+/docs/mermaid.min.js
+/docs/mermaid-init.js

@@ -17,8 +17,8 @@ locals {
   lb_pool_stop  = "10.212.4.254"
 
   # The Service Cilium generates for a Gateway: `cilium-gateway-<name>`, in the
-  # Gateway's own namespace. Both halves are stated in the apps repo
-  # (`infrastructure/configs`), so renaming the Gateway there breaks the
+  # Gateway's own namespace. Both halves are stated in
+  # platform/platform_gateway.tf, so renaming the Gateway there breaks the
   # reservation here
   ingress_gateway_namespace = "gateway"
   ingress_gateway_service   = "cilium-gateway-lab"

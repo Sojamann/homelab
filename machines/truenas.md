@@ -3,6 +3,9 @@
 The NAS. Done by hand in the UI and stays that way. Build it before the
 Proxmox nodes: where guest disks live is baked in at node install.
 
+How it is used and restored: [TrueNAS](../docs/src/platform/truenas.md),
+[Storage](../docs/src/storage.md), [Backups](../docs/src/backups.md).
+
 ## Hardware
 
 `UGREEN NASync DXP4800 GT`, 4-bay, running TrueNAS instead of UGOS.
@@ -44,15 +47,15 @@ included.
      what keeps it from locking you out
 7. get a certificate for the domain: *Credentials* -> *Certificates*
    - add ACME DNS credentials
-   - add a CSR, e.g. `lab-csr`, with **four names**: `nas.lab.<domain>`,
-     `nas-k8s.lab.<domain>`, `s3.lab.<domain>`, `s3-k8s.lab.<domain>`. One
+   - add a CSR, e.g. `lab-csr`, with **four names**: `nas.<lab_domain>`,
+     `nas-k8s.<lab_domain>`, `s3.<lab_domain>`, `s3-k8s.<lab_domain>`. One
      certificate serves both interfaces and [Garage](#s3-garage). democratic-csi
      verifies `nas-k8s` -- a missing SAN there is a driver that cannot talk to
      the NAS. SANs are fixed per CSR: adding a name means a new CSR and order
    - on the CSR: order certificate
    - *System* -> *General* -> *GUI* -> set it as the UI certificate
 8. login to the TrueNAS ui through the dns record
-   - the `nas.lab.<domain>` and `nas-k8s.lab.<domain>` A records are written by
+   - the `nas.<lab_domain>` and `nas-k8s.<lab_domain>` A records are written by
      [network](../network/README.md), not by hand
 9. bind the services (below) -- everything but the API stays on Trusted
 10. create an `admin` user with sudo, use it instead of `truenas_admin`
@@ -128,11 +131,7 @@ everywhere by leaving it alone. Create structure only -- permissions come after.
 Nothing on `fast` is created here. democratic-csi makes its own datasets on the
 first PVC and owns them entirely -- see [platform](../platform/README.md). They
 inherit the pool-root properties above, which is the only reason those matter
-for `fast`. Nor is there a snapshot task on `fast`: the driver takes its own
-through `VolumeSnapshot`, and a snapshot it does not know about blocks the zvol
-destroy behind a PVC, which then sits in `Terminating`. A snapshot there would
-protect against you anyway, not against the drive. The PVCs' backup is VolSync
-into `slow/garage` instead -- see [S3 (Garage)](#s3-garage).
+for `fast`. **No snapshot task on `fast`** -- why: [ZFS snapshots](../docs/src/backups.md#zfs-snapshots).
 
 `slow/k8s-csi` is created here, and that asymmetry is the second CSI driver:
 csi-driver-nfs has no API to the NAS and no concept of a dataset. It mounts one
@@ -152,21 +151,13 @@ by hand, and every `bulk` volume lives within it.
 | `users/<name>/files`        | 128K       | zstd  | via `users` task  | SMB, per person         |
 | `users/<name>/time-machine` | 1M         | lz4   | **none**          | SMB, TM preset + quota  |
 
-Why the "none"s and the short one:
+Why the "none"s and the short one: [ZFS snapshots](../docs/src/backups.md#zfs-snapshots).
+Setting them up:
 
-- `time-machine` -- a ZFS snapshot pins the sparsebundle bands TM deletes, so
-  it grows forever while TM thinks it is reclaiming. The recursive task on
-  `slow/users` excludes it via the pattern `slow/users/*/time-machine`
-  (*Exclude* field on the task).
-
-One recursive task on `slow/users` covers every user, current and future --
-no per-user task. Recursive means one snapshot **per dataset** (same name,
-atomic), not one snapshot of the tree: each user rolls back and browses
-`.zfs/snapshot` independently.
-- `garage` -- short for the same trap: snapshots pin blocks PBS GC frees. Kept
-  at all because Garage has no object lock; this is what survives a client
-  deleting its own bucket. Recursive, so `meta` and `data` stay consistent.
-  Rollback hits every tenant -- for one bucket, clone and copy out instead.
+- `time-machine` -- the recursive task on `slow/users` excludes it via the
+  pattern `slow/users/*/time-machine` (*Exclude* field on the task). One
+  recursive task covers every user, current and future -- no per-user task.
+- `garage` -- recursive, so `meta` and `data` stay consistent.
 - `node-exporter` -- rewritten every minute, nothing worth keeping.
 - `ha-backups` -- 1M because a backup is one multi-GB tar written straight
   through, and `lz4` is a near no-op on it.
@@ -179,8 +170,8 @@ preset -- nothing reaches it over SMB. Nothing below the root is set by hand:
 the driver creates each PV directory and `chown`s it itself.
 
 The exception is `syncthing/`, the household's synced files, bound as a static
-`Retain` PV so no PVC delete can take it (see the apps repo's
-`docs/syncthing.md`). The driver does not create what it did not provision:
+`Retain` PV so no PVC delete can take it (see
+[Syncthing](../docs/src/workloads/syncthing.md)). The driver does not create what it did not provision:
 
 ```sh
 mkdir /mnt/slow/k8s-csi/syncthing && chown 1000:1000 /mnt/slow/k8s-csi/syncthing
@@ -255,12 +246,12 @@ not new. What scopes it is the dedicated user and that the key is revocable.
   ```
   curl -sX PUT -H "Authorization: Bearer $TRUENAS_API_KEY" \
     -H 'Content-Type: application/json' -d '{"addr_traddr": "10.212.4.150"}' \
-    https://nas.lab.<domain>/api/v2.0/nvmet/port/id/1
+    https://nas.<lab_domain>/api/v2.0/nvmet/port/id/1
   ```
   Anything currently attached drops when the address moves.
   ```
   curl -sH "Authorization: Bearer $TRUENAS_API_KEY" \
-    https://nas.lab.<domain>/api/v2.0/nvmet/port
+    https://nas.<lab_domain>/api/v2.0/nvmet/port
   ```
 - needs TrueNAS **25.10+**. iSCSI stays **off**.
 
@@ -319,7 +310,7 @@ A key inherits the privileges of the user it hangs off, so it gets its own.
 5. Verify, which also gets you the port **ID** for `nvmeof.ports`:
    ```
    curl -sH "Authorization: Bearer $TRUENAS_API_KEY" \
-     https://nas.lab.<domain>/api/v2.0/nvmet/port
+     https://nas.<lab_domain>/api/v2.0/nvmet/port
    ```
    `403` means the privilege is not `FULL_ADMIN`
 
@@ -336,7 +327,7 @@ away from `10.212.4.150:4420` -- see [network](../network/README.md).
 ## Monitoring
 
 node-exporter as a custom app, scraped by the cluster's Prometheus -- see
-[flux/docs/monitoring.md](../flux/docs/monitoring.md). Same VLAN, no firewall rule.
+[Monitoring](../docs/src/monitoring.md#truenas). Same VLAN, no firewall rule.
 
 1. *Apps* -> *Configuration* -> *Choose Pool*: `slow` -- never `fast`, which
    democratic-csi owns
@@ -371,8 +362,8 @@ Install:
    quota 1T on `slow/garage`; snapshot task daily, recursive, 7d
 2. CSR with the `s3` SANs, see [First Setup](#first-setup)
 3. *Install via YAML*: paste the compose file, filling `<placeholders>` from
-   `secrets/vault.yml` (`garage_*`), `<domain>`, and `<cert>` -- the name in
-   `/etc/certificates/`
+   `secrets/vault.yml` (`garage_*`), `<lab_domain>`, and `<cert>` -- the
+   name in `/etc/certificates/`
 4. *Cron Jobs*, `root`, weekly -- Caddy does not watch the cert files:
    ```sh
    docker exec ix-garage-caddy-1 caddy reload --force --config /etc/caddy/Caddyfile
@@ -385,7 +376,7 @@ Install:
    garage layout apply --version 1
    ```
 
-A consumer (region `lab`, path-style, `https://s3[-k8s].lab.<domain>:3900`):
+A consumer (region `lab`, path-style, `https://s3[-k8s].<lab_domain>:3900`):
 
 ```sh
 garage bucket create <name>
@@ -400,24 +391,5 @@ reads; k8s consumers get it via platform at `kv/<ns>/<app>/s3`.
 
 | Bucket | Quota | Consumer |
 |--------|-------|----------|
-| `proxmox-backups` | 300G | PBS datastore, see [guests](../guests/README.md#backups) |
-| `k8s-backups`     | 50G  | VolSync, restic per PVC, see [volsync](https://github.com/Sojamann/homelab-apps/blob/main/docs/volsync.md) |
-
-## Backup Layers
-
-1. **ZFS snapshots** -- undo, same pool. Survives a mistake and nothing else.
-2. **PBS on Garage (`slow/garage`)** -- per-VM, per-file restore. Survives a dead
-   guest, node or NVMe. The PBS VM itself lives on node-local `local`.
-3. **Home Assistant's own backups on `slow/ha-backups`** -- application-level,
-   and the reason for a second copy of one guest: PBS restores the VM, this
-   restores a configuration into a Home Assistant that is already running, and
-   it is the layer that survives PBS. Scheduled and encrypted inside the
-   appliance, not here.
-4. **VolSync on Garage (`k8s-backups`)** -- restic, nightly, for the `fast`
-   PVCs that cannot be rebuilt. Survives a dead NVMe, a lost `fast` pool and a
-   deleted PVC -- the cases ZFS snapshots on `fast` cannot cover, since they
-   live in the zvol.
-5. **Offsite (B2)** -- survives losing the NAS. **Not built.** `users/` goes
-   first when it is.
-
-Until 5 exists, one fire takes the guests, the PVCs and every backup of them.
+| `proxmox-backups` | 300G | PBS datastore, see [PBS](../docs/src/backups.md#pbs) |
+| `k8s-backups`     | 50G  | VolSync, restic per PVC, see [VolSync](../docs/src/backups.md#volsync) |

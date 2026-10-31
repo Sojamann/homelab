@@ -7,6 +7,8 @@ hosts.**
 Assumes [machines](../machines/README.md) is complete: the node is installed,
 reachable over SSH with a key, and already a member of a quorate cluster.
 
+How the hosts are run and restored: [Proxmox](../docs/src/platform/proxmox.md).
+
 ## Running it
 
 ```sh
@@ -19,16 +21,7 @@ exist yet stay commented out in `hosts.yml`.
 
 ### Secrets
 
-`secrets/vault.yml` is an ansible-vault file shared by every stage; the
-password lives in the gitignored `secrets/.vault-pass`. Start from
-`secrets.example.yml`:
-
-```sh
-cp secrets.example.yml secrets/vault.yml
-$EDITOR secrets/vault.yml
-ansible-vault encrypt secrets/vault.yml
-```
-
+`secrets/vault.yml` is created in [bootstrap](../bootstrap/README.md#secrets).
 `secrets/proxmox-token.yml` is written by the playbook and holds the guests
 API token secret, vault-encrypted. It is committed, so a fresh clone still has
 the value.
@@ -47,7 +40,7 @@ the value.
 | Single-pool storage | `local` holds guest disks, ISOs, templates, backups and cloud-init snippets; an unused `local-lvm` is removed. The disk itself is never repartitioned -- see [machines](../machines/proxmox.md) |
 | ACME certificate | Proxmox's built-in client, DNS-01 via Cloudflare. **Proxmox owns renewal** -- nothing here watches it |
 | API user + token | The identity guests uses; secret captured into the vault |
-| Metrics exporters | `prometheus-node-exporter` from apt, `pve-exporter` from PyPI in `/opt/pve-exporter` -- Debian does not package it. Both bind the host address; the exporter's `PVEAuditor` token stays in `/etc/prometheus/pve.yml` on the host. Scraped from the cluster, see [flux/docs/monitoring.md](../flux/docs/monitoring.md) |
+| Metrics exporters | `prometheus-node-exporter` from apt, `pve-exporter` from PyPI in `/opt/pve-exporter` -- Debian does not package it. Both bind the host address; the exporter's `PVEAuditor` token stays in `/etc/prometheus/pve.yml` on the host. Scraped from the cluster, see [Monitoring](../docs/src/monitoring.md) |
 
 Anything in `/etc/pve` is replicated cluster-wide, so those steps (ACME
 account, DNS plugin, API user/token) run **once**, against `cluster_primary`.

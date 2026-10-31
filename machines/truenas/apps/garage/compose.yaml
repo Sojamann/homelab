@@ -63,19 +63,19 @@ configs:
         tls /certs/<cert>.crt /certs/<cert>.key
       }
 
-      https://s3.lab.<domain>:3900, https://s3-k8s.lab.<domain>:3900 {
+      https://s3.<lab_domain>:3900, https://s3-k8s.<lab_domain>:3900 {
         bind 10.212.2.150 10.212.4.150
         import tls
         reverse_proxy 127.0.0.1:3910
       }
 
-      https://s3.lab.<domain>:3903 {
+      https://s3.<lab_domain>:3903 {
         bind 10.212.2.150
         import tls
         reverse_proxy 127.0.0.1:3913
       }
 
-      https://s3-k8s.lab.<domain>:3903 {
+      https://s3-k8s.<lab_domain>:3903 {
         bind 10.212.4.150
         import tls
         handle /metrics {

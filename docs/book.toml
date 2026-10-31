@@ -1,0 +1,25 @@
+[book]
+title = "Homelab"
+src = "src"
+
+[build]
+# Off to drop `index`, which turns README.md chapters into index.html while
+# links to them still point at README.html.
+use-default-preprocessors = false
+
+[preprocessor.links]
+
+[preprocessor.github-links]
+command = "../scripts/docs-links.sh"
+after = ["links"]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+additional-css = ["theme/custom.css"]
+# Written by `mdbook-mermaid install` at build time, see scripts/docs.sh.
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+git-repository-url = "https://github.com/Sojamann/homelab"

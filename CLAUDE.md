@@ -4,4 +4,19 @@
 - never allow any form of committed secret to not be encrypted
 - ansible-vault values should not be quoted
 - when we delete an app from the flux layer that used fast storage we should delete its backups in s3 (garage on NAS)
-
+- docs: topic pages in `docs/src/` are the only home for how things work, are operated and restored; stage docs (`*/README.md`, `machines/*.md`, `bootstrap/*.md`, `flux/docs/*.md`) hold only build/rebuild content plus links. No fact in both
+- docs drift: a code change updates its topic page(s) in `docs/src/` in the same change:
+  - `flux/apps/<x>` -> `workloads/<x>.md`; `guests/guest_vm_home_assistant.tf` -> `workloads/home-assistant.md`
+  - any `backup.yaml`, PBS job, ZFS snapshot task, HA backup schedule -> `backups.md` (coverage matrix too)
+  - alert rules, scrape configs, dashboards -> `monitoring.md`
+  - `network/` -> `networking.md`
+  - `machines/` -> `platform/proxmox.md`, `platform/truenas.md`, `storage.md`
+  - `machine-config/` -> `platform/proxmox.md`
+  - `guests/` -> the VM's platform/workload page + the diagram in `index.md`
+  - `cluster/` -> `platform/talos.md`
+  - `platform/` -> `storage.md`, `platform/flux.md`, `platform/openbao.md`, `networking.md#front-door`, `access.md`
+  - `flux/infrastructure/<x>` -> its `platform/<x>.md` (volsync -> `backups.md`, kube-prometheus-stack -> `monitoring.md`, tailscale -> `networking.md`)
+  - vault keys, `secrets/` layout -> `access.md`, `conventions.md`
+  - Renovate config, upgrade steps -> `maintenance.md`
+  - restore drill performed -> its **Last verified** date in `backups.md`
+- `mise run docs build` must pass (zero broken links)

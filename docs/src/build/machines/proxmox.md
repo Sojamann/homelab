@@ -1,0 +1,1 @@
+{{#include ../../../../machines/proxmox.md}}

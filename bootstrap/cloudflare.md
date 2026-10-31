@@ -1,6 +1,6 @@
 # Cloudflare
 
-Cloudflare is the public authority for `<domain>`. It exists in this setup for
+Cloudflare is the public authority for `<zone>`. It exists in this setup for
 exactly one reason: proving to Let's Encrypt that you control the domain.
 
 ## What Cloudflare actually holds
@@ -10,14 +10,15 @@ exactly one reason: proving to Let's Encrypt that you control the domain.
   certificate order and renewal. They exist for seconds at a time.
 
 No `A` records, no delegation, nothing persistent -- every name under it is resolved privately by
-[UniFi](../network/README.md#dns), and the addresses never leave the network.
+[UniFi](../docs/src/networking.md#dns), and the addresses never leave the network.
 
 The one unavoidable exception is the challenge record itself: DNS-01 proves
-control by publishing `_acme-challenge.<node>.lab.<domain>` as a TXT record in
+control by publishing `_acme-challenge.<node>.<lab_domain>` as a TXT record in
 the public zone, so the *name* of a node is briefly visible even though its
 address never is. Avoiding that entirely would mean dropping Let's Encrypt for
 a private CA and distributing your own root to every client.
 
+> [!NOTE]
 > Per-node hostnames still appear in public Certificate Transparency logs --
 > that is inherent to using a publicly trusted CA, and is an accepted
 > trade-off.
@@ -31,7 +32,7 @@ Create a scoped token (My Profile -> API Tokens) with exactly:
 | Zone / DNS        | Edit  |
 | Zone / Zone       | Read  |
 
-Restricted to `<domain>`. No account-level permissions -- the ACME plugin
+Restricted to `<zone>`. No account-level permissions -- the ACME plugin
 resolves the zone from the record name, which is why no account ID is needed.
 
 Put the value in the vault as `cloudflare_api_token`, alongside `acme_email`

@@ -1,13 +1,15 @@
 # Proxmox Setup (manual)
 
+How Proxmox is used and restored: [Proxmox](../docs/src/platform/proxmox.md).
+
 Per node, once. Everything after this is [machine-config](../machine-config/README.md).
 Set up [truenas](./truenas.md) first -- bulk storage comes over NFS from the NAS.
 
 1. **Install Proxmox VE 9** from the ISO. Static IP from the physical range
    (`10.212.2.151-159`), root password. Under *Options* on the disk screen:
 
-   - **`maxvz=0`** 
-   - **`maxroot` = disk size**. 
+   - **`maxvz=0`**
+   - **`maxroot` = disk size**
 
    `maxvz=0` only skips the LVM-thin pool -- it does not hand the space
    to root, which otherwise keeps its default quarter of the disk and strands
@@ -26,25 +28,26 @@ Set up [truenas](./truenas.md) first -- bulk storage comes over NFS from the NAS
 3. **Join the cluster.** Manual because `pvecm` authenticates with root@pam's
    *password*, which deliberately does not live in the repo.
 
-   **Once for the whole lab**, on dione only -- never again on any other node,
-   or you get two separate one-node clusters:
+   **Once for the whole lab**, on the first node only (titan, `10.212.2.151`)
+   -- never again on any other node, or you get two separate one-node clusters:
    ```sh
    pvecm create lab
    ```
-   Worth doing while dione is alone: a single-node cluster is quorate.
+   A single-node cluster is quorate.
 
    **On every other node**, only while it still has no VMs (joining overwrites
    parts of its config):
    ```sh
-   pvecm add 10.212.2.151    # the leader
+   pvecm add 10.212.2.151    # titan
    ```
 
    > At exactly two nodes quorum needs both up. Get to three reasonably soon.
 
 4. Uncomment the node in `machine-config/inventory/hosts.yml`, add an `A`
-   record in `network/unifi_dns.tf`, and add it to `guests/guest_nodes.tf` if it
-   is to store guest disks.
-5. **Pocket ID callback.** Add `https://<node>.lab.<domain>:8006` to the
+   record in `network/unifi_dns.tf`, add it to `guests/guest_nodes.tf` if it
+   is to store guest disks, and to
+   `flux/infrastructure/configs/proxmox/scrape.yaml`.
+5. **Pocket ID callback.** Add `https://<node>.<lab_domain>:8006` to the
    `proxmox` client's callbacks.
 
 ## Pocket ID login
@@ -53,7 +56,7 @@ Once for the whole cluster, after machine-config (the realm lives in
 `/etc/pve`). `root@pam` stays as break-glass.
 
 1. In Pocket ID, add client `proxmox`: confidential, PKCE off, one callback
-   per node (`https://<node>.lab.<domain>:8006`), allowed group `admins`.
+   per node (`https://<node>.<lab_domain>:8006`), allowed group `admins`.
 2. On any node:
    ```sh
    pveum group add admins-pocket-id
