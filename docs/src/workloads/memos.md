@@ -90,6 +90,7 @@ admin UI refuses changes to it):
 
 - the Pocket ID identity provider
 - access private; registration open (only via SSO), password auth off
+- usernames locked (the SSO link key); weeks start Monday
 - attachments to local storage, `assets/{timestamp}_{uuid}_{filename}`
 - user `admin`, role admin -- the password is sent on create only. To push a
   rotated one, bump `writeOnlyVersion` in `instance.json`
@@ -113,6 +114,7 @@ API; a release that renames a field fails startup loudly rather than drifting.
 ## Gotchas
 
 - **Renaming a user in Pocket ID gives them a new, empty account** here: the
-  username is also the SSO link key. Rename in both, or not at all.
+  username is also the SSO link key. Rename in both, or not at all. Renaming
+  in Memos is off for that reason (`disallowChangeUsername`).
 - **An invalid `instance.json` stops startup** (`config` in the logs).
 - **One pod, `Recreate`.** SQLite has one writer and the data volume is RWO.
