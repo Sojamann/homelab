@@ -95,6 +95,17 @@ variable "grafana_oidc_client_secret" {
   sensitive   = true
 }
 
+variable "memos_oidc_client_id" {
+  description = "Memos' client id in Pocket ID"
+  type        = string
+}
+
+variable "memos_oidc_client_secret" {
+  description = "Memos' client secret in Pocket ID -- shown once, at registration"
+  type        = string
+  sensitive   = true
+}
+
 variable "bao_oidc_client_id" {
   description = "OpenBao's client id in Pocket ID"
   type        = string

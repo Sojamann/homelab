@@ -49,7 +49,7 @@ Arguments are forwarded to `tofu`. `init` runs automatically on first use.
 Read out of the ansible vault by `scripts/tofu.sh` and exported. None is
 Proxmox or UniFi -- this layer talks to the cluster, to the NAS and to OpenBao,
 and to nothing else in the lab. The Telegram, heartbeat, Kassenbuch,
-Vaultwarden and Grafana values it only carries: they are written into OpenBao and
+Vaultwarden, Grafana and Memos values it only carries: they are written into OpenBao and
 `cluster-vars` for the apps, and nothing here dials them.
 
 | Variable                              | Source              | For                                   |
@@ -68,6 +68,8 @@ Vaultwarden and Grafana values it only carries: they are written into OpenBao an
 | `TF_VAR_garage_metrics_token`         | `secrets/vault.yml` | Prometheus -> Garage's `/metrics`     |
 | `TF_VAR_grafana_oidc_client_id`       | `secrets/vault.yml` | Grafana's Pocket ID client            |
 | `TF_VAR_grafana_oidc_client_secret`   | `secrets/vault.yml` | its secret                            |
+| `TF_VAR_memos_oidc_client_id`         | `secrets/vault.yml` | Memos' Pocket ID client               |
+| `TF_VAR_memos_oidc_client_secret`     | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_bao_oidc_client_id`           | `secrets/vault.yml` | OpenBao's Pocket ID client            |
 | `TF_VAR_bao_oidc_client_secret`       | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_tailscale_operator_client_id` | `secrets/vault.yml` | the tailscale operator's OAuth client |

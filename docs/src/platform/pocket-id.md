@@ -85,6 +85,7 @@ secret costs a re-registration, not access.
 | OpenBao | `admins` | `platform_openbao.tf`, see [OpenBao](openbao.md) | root token |
 | Proxmox | `admins` | by hand, see [Proxmox](proxmox.md) | `root@pam` |
 | PBS | `admins` | by hand, see [PBS](pbs.md) | `root@pam` |
+| Memos | `admins`, `household` | `apps/memos/instance.json`, see [Memos](../workloads/memos.md) | user `admin` |
 
 TrueNAS and Vaultwarden do not use it.
 
@@ -102,6 +103,6 @@ TrueNAS and Vaultwarden do not use it.
 
 ## What breaks without it
 
-SSO logins to Grafana, OpenBao, Proxmox and PBS -- each falls back to its
+SSO logins to Grafana, OpenBao, Proxmox, PBS and Memos -- each falls back to its
 break-glass login (table above). Nothing else; apps without SSO are
 unaffected.

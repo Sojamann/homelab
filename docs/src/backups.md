@@ -46,6 +46,8 @@ route cannot apply. *Other* lists the incidental copies under
 | **Vaultwarden** (`vaultwarden-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | admin token hash | n/a | ✗ | clients' offline cache, items only |
 | **Syncthing** files (`slow/k8s-csi/syncthing`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | trash can 7d; every paired device |
 | **Syncthing** config + keys (`syncthing-config`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
+| **Memos** attachments (`slow/k8s-csi/memos`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
+| **Memos** db (`memos-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
 | **DHS** postgres (external Hetzner box) | n/a | n/a | n/a | ✓ d14 w8 m6, via the nightly dump | backup role password | n/a | ✗ | last dump on `postgres-dump` |
 | **Kassenbuch** (`kassenbuch-data`, bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | password hash | n/a | ✗ | |
 | **Supplement tracker** (bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
@@ -255,6 +257,7 @@ App specifics: [Home Assistant](workloads/home-assistant.md).
 | `syncthing-config` | `syncthing` | `00:30` | `apps/syncthing/backup.yaml` | 1000 |
 | `pocket-id-state` | `pocket-id` | `00:45` | `infrastructure/configs/pocket-id/backup.yaml` | 1000 |
 | `postgres-dump` | `dhs` | `01:00` | `apps/dhs/backup.yaml` | 70 |
+| `memos-data` | `memos` | `01:15` | `apps/memos/backup.yaml` | 1000 |
 
 `postgres-dump` holds a `pg_dump -Fc` of the DHS box, written by a CronJob at
 `00:30` (`apps/dhs/dump.yaml`) and alerted on by `DhsDumpStale` -- see

@@ -168,6 +168,31 @@ resource "vault_kv_secret_v2" "syncthing" {
 }
 
 ####################################
+#              MEMOS               #
+####################################
+
+# The admin is break-glass only -- everyone else signs in through Pocket ID.
+# Read the password with
+# `kubectl -n memos get secret memos -o jsonpath='{.data.ADMIN_PASSWORD}' | base64 -d`.
+resource "random_password" "memos_admin" {
+  length  = 32
+  special = false
+}
+
+resource "vault_kv_secret_v2" "memos" {
+  mount = vault_mount.kv.path
+  name  = "memos/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    admin-password     = random_password.memos_admin.result
+    oidc-client-id     = var.memos_oidc_client_id
+    oidc-client-secret = var.memos_oidc_client_secret
+  })
+}
+
+####################################
 #             VOLSYNC              #
 ####################################
 

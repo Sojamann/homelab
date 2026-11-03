@@ -115,7 +115,8 @@ Rules:
 ```
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
-│   └── syncthing/   a static PV, made by hand -- see below
+│   ├── syncthing/   a static PV, made by hand -- see below
+│   └── memos/       likewise
 ├── garage/          S3, see S3 (Garage)
 │   ├── meta         metadata DB
 │   └── data         object blocks
@@ -175,6 +176,13 @@ The exception is `syncthing/`, the household's synced files, bound as a static
 
 ```sh
 mkdir /mnt/slow/k8s-csi/syncthing && chown 1000:1000 /mnt/slow/k8s-csi/syncthing
+```
+
+Memos' attachments are the same kind of static PV (see
+[Memos](../docs/src/workloads/memos.md)):
+
+```sh
+mkdir /mnt/slow/k8s-csi/memos && chown 1000:1000 /mnt/slow/k8s-csi/memos
 ```
 
 Personal files live there, not in `users/<name>/files` -- that share stays as
