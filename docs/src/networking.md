@@ -263,7 +263,6 @@ first and cut k8s off from the NAS):
 | `nvmeof-deny-cross-vlan` | block | the other four networks -> `10.212.4.150:4420` |
 | `s3-deny-cross-vlan` | block | Guest, Management, IoT -> Garage `:3900`/`:3903` on both NAS addresses |
 | `metrics-allow-proxmox` | allow | k8s -> Proxmox hosts tcp 9100, 9221 (node- and pve-exporter) |
-| `metrics-allow-home-assistant` | allow | k8s -> `10.212.2.161` tcp 8123 |
 | `k8s-deny-internal` | block | k8s -> Guest, Management, Trusted, IoT |
 
 k8s -> internet is a different zone pair and open: images, updates.

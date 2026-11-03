@@ -12,8 +12,8 @@ lives in the VM, not in this repo. Using it is upstream:
 - **URL:** `http://ha.<lab_domain>:8123` -- straight to the VM, not through
   the gateway, no TLS from the lab.
 - **Reachability:** LAN (Trusted) and tailnet: `group:family` gets tcp 8123
-  on `10.212.2.161`, `group:admin` the whole Trusted route. Not public. From
-  the k8s VLAN only Prometheus's narrow allow (`metrics-allow-home-assistant`).
+  on `10.212.2.161`, `group:admin` the whole Trusted route. Not public, and
+  not reachable from the k8s VLAN.
   See [Networking](../networking.md).
 - **Login:** Home Assistant's own users, credentials in the password
   managers. No SSO is configured from this repo.
@@ -86,8 +86,7 @@ with it.
 **Address.** Set once by hand at the console. The local in the `.tf` drives
 only the id, the MAC and the DNS record -- the one address in this repo that a
 guest could disagree with. The tailnet policy (`network/tailscale_policy.tf`)
-and the firewall allow (`network/unifi_firewall.tf`) hard-code `10.212.2.161`
-too; changing it means changing all three.
+hard-codes `10.212.2.161` too; changing it means changing both.
 
 **Disk.** HA OS grows its data partition to fill the disk on first boot, and
 Proxmox can grow it online, so 32G is a floor. To grow: raise `size` in the
@@ -98,10 +97,10 @@ appliance (*Settings* -> *System* -> *Backups*). The share is reached as the
 NAS service account `ha-backup`. The encryption key's second copy is in the
 password managers.
 
-**Metrics.** The firewall allows k8s Prometheus to scrape `:8123`
-(`/api/prometheus`, filtered to HA's own health metrics, guarded by a token).
-The scrape config itself is not in the apps repo yet -- see
-[Monitoring](../monitoring.md).
+**Metrics.** None: no scrape, and k8s cannot reach the VM. Adding one needs a
+narrow allow from k8s to tcp 8123 in `network/unifi_firewall.tf` (8123 is HA's
+whole API, so its own policy, not `exporter_ports`) and a token-guarded scrape
+of `/api/prometheus`. See [Monitoring](../monitoring.md).
 
 ## Gotchas
 

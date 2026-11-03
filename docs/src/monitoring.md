@@ -71,8 +71,8 @@ down.
   to Telegram (set up in the UI, not in this repo)
 - ZFS snapshot and scrub tasks -- TrueNAS's own alerts, to Telegram (set up in the UI, not in this repo); SMART (not
   exported, and not set up)
-- Home Assistant and its own backups. The firewall allows a scrape on
-  `10.212.2.161:8123`, but no scrape config exists.
+- Home Assistant and its own backups. No scrape, and k8s cannot reach the
+  VM (`k8s-deny-internal`).
 - Proxmox and TrueNAS certificate renewals
 - TrueNAS's own alerts go wherever its alert delivery is configured -- not
   recorded here.
