@@ -4,7 +4,7 @@ Three places data sits, chosen by redundancy against speed:
 
 | Tier | Where | Media | Redundancy | For |
 |--|--|--|--|--|
-| `fast` | NAS pool `fast` | 1x NVMe 500GB, encrypted | **none** | latency-bound PVCs: databases, indexes, OpenBao, Prometheus |
+| `fast` | NAS pool `fast` | 2x 1TB NVMe, one mirror, ~950GB usable, encrypted | 1 disk | latency-bound PVCs: databases, indexes, OpenBao, Prometheus |
 | `slow` | NAS pool `slow` | 2x 4TB HDD, one mirror, ~4TB usable, encrypted | 1 disk | `bulk` PVCs, people's files, every backup |
 | `local` | each Proxmox node's own disk | node disk | none | VM disks (qcow2), ISOs, images |
 
@@ -172,10 +172,11 @@ drop it from git and delete it by hand. Set the annotation in git, not with
 - `slow`: stay under 80% (~3.2TB); `NasPoolFull` warns above it. Grow by
   adding a **second mirror vdev** in the two free bays (8TB usable), never by
   widening one.
-- `fast`: the single 500GB NVMe. Mirror it later with `zpool attach` / UI
-  *Extend*, **never** `zpool add` (that stripes, and loses everything when
-  either drive dies). A scrub on `fast` can only report, not repair: an error
-  there means buy the second M.2 that week.
+- `fast`: 2x 1TB NVMe, one mirror; both M.2 slots are full. Grow by
+  replacing both drives with bigger ones, one at a time -- see
+  [TrueNAS, *Replacing a drive*](platform/truenas.md#replace-drive).
+  **Never** `zpool add` (that stripes, and loses everything when either drive
+  dies).
 - Scrubs: both pools, weekly task with a 30-day threshold, so monthly.
 - SMART tests: **not set up**. Intended: short weekly, long monthly.
 
@@ -193,7 +194,9 @@ zfs list -o name,used,avail,refer -r slow -d 2
   OpenBao, Pocket ID and Prometheus are on `fast`, so it is effectively the
   whole cluster. VM disks are on `local` and keep running, but PBS has no
   datastore.
-- **`fast` NVMe dead** -- every `fast` PVC gone; see
+- **One `fast` NVMe dead** -- nothing visible; the mirror runs degraded
+  until the drive is [replaced](platform/truenas.md#replace-drive).
+- **Both `fast` NVMes dead** -- every `fast` PVC gone; see
   [VolSync, *Lost `fast` pool*](backups.md#volsync).
 - **democratic-csi down** -- running pods keep their volumes; new `fast` PVCs
   stay `Pending`, deletes hang. Same for csi-driver-nfs and `bulk`.

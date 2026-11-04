@@ -30,8 +30,8 @@ enforced), mounted at `/data`:
 | `belege/` | receipts | **yes** |
 | `exports/` | generated exports | **yes** |
 
-These are records with a retention duty (ten years), so they sit on the
-mirror and in the NAS snapshots rather than on the unmirrored `fast` NVMe.
+These are records with a retention duty (ten years), so they sit on
+`bulk`, under the NAS snapshots, which `fast` cannot have.
 
 Not state: the password hash (OpenBao, from `secrets/vault.yml` via tofu)
 and the manifests.

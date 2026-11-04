@@ -11,7 +11,7 @@ How it is used and restored: [TrueNAS](../docs/src/platform/truenas.md),
 `UGREEN NASync DXP4800 GT`, 4-bay, running TrueNAS instead of UGOS.
 
 - 4 bays, 2 populated -- 2x 4TB HDD, one mirror vdev, 4TB usable
-- 2 M.2 NVMe slots, 1 populated -- 500GB, no redundancy
+- 2 M.2 NVMe slots, both populated -- 2x 1TB, one mirror vdev, ~950GB usable
 - onboard 64GB eMMC (`mmcblk0`) -- TrueNAS boot pool, replaces UGOS. Its
   hardware boot partitions `mmcblk0boot0/1` (4 MiB each, read-only) show up
   as 2 unassigned SSDs -- expected, never add them to a pool
@@ -65,7 +65,7 @@ included.
 
 | Pool   | Media | Layout           | Redundancy | Holds                      |
 |--------|-------|------------------|------------|----------------------------|
-| `fast` | NVMe  | stripe, width 1  | **none**   | k8s PVCs                   |
+| `fast` | NVMe  | mirror, 2x 1TB   | 1 disk     | k8s PVCs                   |
 | `slow` | HDD   | mirror, 2x 4TB   | 1 disk     | backups, tofu state        |
 
 Per pool, after creation:
@@ -80,7 +80,6 @@ zfs set compression=lz4 fast
 Infos:
 - grow `slow` by adding a **second mirror vdev** (2 free bays, 8TB usable),
   never by widening one
-- mirror `fast` later with `zpool attach` / UI *Extend*, **never** `zpool add`
 - ~4TB usable on `slow`, stay under 80% -> ~3.2TB
 - no reservations; quotas only on `time-machine`, `ha-backups` and `garage`
 
@@ -88,11 +87,9 @@ Scrub tasks -- both pools, *Data Protection* -> *Scrub Tasks*:
 
 - schedule **weekly**, threshold **30 days** -> scrubs monthly, catches up if
   the box was off on the due day
-- on `fast` a scrub can only report, not repair -- an error there means buy the
-  second M.2 that week
 
 SMART tests -- **not set up yet**. Intended: short weekly, long monthly, all
-three drives.
+four drives.
 
 ## Creating Users
 

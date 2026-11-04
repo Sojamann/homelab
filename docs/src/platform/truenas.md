@@ -42,7 +42,7 @@ compose files: `machines/truenas/apps/garage/compose.yaml`,
 
 | Pool | Disks | Holds |
 |--|--|--|
-| `fast` | 1x 500G NVMe, **no redundancy**, encrypted | `fast` PVCs (zvols), owned by democratic-csi |
+| `fast` | 2x 1TB NVMe mirror, encrypted | `fast` PVCs (zvols), owned by democratic-csi |
 | `slow` | 2x 4TB HDD mirror, encrypted | everything below |
 
 | Dataset | What | Consumer |
@@ -135,8 +135,28 @@ compose file; then edit the app in TrueNAS and set the new tag -- nothing
 applies it. See [Maintenance](../maintenance.md).
 
 **Health.** Scrub tasks weekly with a 30-day threshold, both pools. SMART tests
-are **not set up**. On `fast` a scrub can only report: an error there means
-buying the second NVMe.
+are **not set up**.
+
+## Replacing a drive {#replace-drive}
+
+Both pools are one mirror, so a dead or too-small drive is a resilver, not a
+restore. The M.2 slots don't hot-swap: shut down titan first (nothing writes
+to the NAS then), then the NAS. A free slot or bay: *Extend* the new drive in
+first and *Detach* the old one after, redundant throughout. No free slot
+(`fast`):
+
+1. *Storage* -> pool -> *Manage Devices* -> old disk -> **Offline**. The pool
+   goes `DEGRADED`; the offlined disk keeps its labels -- a rollback copy until
+   wiped.
+2. Power off, swap the drive, boot, unlock the pool.
+3. *Manage Devices* -> the offlined disk -> **Replace** with the new one, wait
+   for the resilver (`zpool status <pool>`).
+4. Bigger drives: *Replace* and *Extend* size the new partition to the old
+   disk, and `autoexpand` cannot grow past it. Once every member is bigger,
+   pool page -> **Expand** (grows the partitions, then the pool).
+5. Scrub; `zpool status <pool>` clean, `zpool list <pool>` at the new size.
+
+Last done: 2026-11-04, `fast` from 1x 500G to 2x 1TB.
 
 ## Gotchas
 
@@ -151,8 +171,8 @@ buying the second NVMe.
   A snapshot the driver does not know blocks the zvol destroy behind a PVC.
 - **NFS maps root to root.** Squashed, the driver's and the kubelet's `chown`
   fail as a pod that mounts and cannot write. Reachability is the only guard.
-- **Grow `slow` with a second mirror vdev**, never by widening one. Mirror
-  `fast` with *Extend* / `zpool attach`, never `zpool add`.
+- **Grow `slow` with a second mirror vdev**, never by widening one. Never
+  `zpool add` a single disk: it stripes, and losing it loses the pool.
 - **The Trusted interface first**: the k8s interface has no gateway and no
   nameserver; configure it second, from the Trusted address, or you lock
   yourself out.

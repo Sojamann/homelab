@@ -22,7 +22,7 @@ graph TD
     GW["UniFi gateway<br/>VLANs, DNS, firewall<br/>10.212.x.1"]
 
     subgraph nas["NAS 10.212.2.150 + 10.212.4.150<br/>UGREEN DXP4800 GT, TrueNAS"]
-      FAST[("fast<br/>1x NVMe 500GB, no redundancy")]
+      FAST[("fast<br/>2x 1TB NVMe mirror")]
       SLOW[("slow<br/>2x 4TB HDD mirror")]
       GARAGE["app: Garage S3<br/>proxmox-backups, k8s-backups"]
       NEXP["app: node-exporter"]

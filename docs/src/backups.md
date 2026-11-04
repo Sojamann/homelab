@@ -81,7 +81,8 @@ route cannot apply. *Other* lists the incidental copies under
 | A PVC deleted | `fast`: [VolSync](#volsync), if it has a `backup.yaml`, else rebuild. `bulk`: [ZFS snapshots](#zfs-snapshots) -- the driver deletes the directory, the snapshots still hold it for 30 days |
 | A dead or broken VM | [PBS](#pbs). Home Assistant also: [its own backups](#ha-backups) |
 | Dead Proxmox node (titan, the only one) | [PBS](#pbs), *Dead node*: PBS first, then the VMs from it, then tofu |
-| Dead `fast` NVMe on the NAS | [VolSync](#volsync), *Lost `fast` pool* |
+| One dead `fast` NVMe on the NAS | [TrueNAS, *Replacing a drive*](platform/truenas.md#replace-drive) |
+| Both `fast` NVMes dead | [VolSync](#volsync), *Lost `fast` pool* |
 | Lost cluster | [Recover from zero](recover-from-zero.md); the Talos VM from [PBS](#pbs), or rebuild and [VolSync](#volsync); [etcd](#etcd-snapshots) only if a snapshot exists |
 | Dead NAS | [Not covered](#not-covered) |
 | Lost laptop, or lost vault password | [Secrets repo](#secrets-repo) |
@@ -246,8 +247,8 @@ App specifics: [Home Assistant](workloads/home-assistant.md).
 ## VolSync on Garage {#volsync}
 
 **How it works.** restic, nightly, for the `fast` PVCs that cannot be rebuilt.
-`fast` is one unmirrored NVMe and a ZFS snapshot there dies with the zvol --
-`kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: an
+`fast` has no ZFS snapshots, and the mirror does not help against a deleted
+zvol -- `kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: an
 `ExternalSecret` with the restic repository and keys, and a
 `ReplicationSource`. Wiring: [volsync.md](build/flux/docs/volsync.md).
 
@@ -298,6 +299,19 @@ repository: `garage_volsync_key_id`, `garage_volsync_secret_key`,
 kubectl get replicationsource -A        # every LAST SYNC within a day
 kubectl -n <ns> get replicationsource <pvc> -o jsonpath='{.status.latestMoverStatus.logs}'
 mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups/   # well under 50G
+```
+
+**Manual run** (e.g. before NAS maintenance). A new `trigger.manual` value
+starts a run; **while it is set the schedule is ignored**, so remove it after.
+
+```sh
+SRCS="vaultwarden/vaultwarden-data syncthing/syncthing-config pocket-id/pocket-id-state memos/memos-data dhs/postgres-dump"
+for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type merge \
+  -p '{"spec":{"trigger":{"manual":"run-'"$(date +%F)"'"}}}'; done
+kubectl get replicationsource -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,LAST_MANUAL:.status.lastManualSync,RESULT:.status.latestMoverStatus.result
+# every LAST_MANUAL = run-<today>, then:
+for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type json \
+  -p '[{"op":"remove","path":"/spec/trigger/manual"}]'; done
 ```
 
 Alerts (warning, to Telegram -- see [Monitoring](monitoring.md)):
@@ -377,7 +391,7 @@ restic snapshots
 restic restore latest --target ./restore
 ```
 
-**Lost `fast` pool.** Replace the NVMe and recreate the pool per
+**Lost `fast` pool.** Replace the NVMes and recreate the pool per
 [machines/truenas.md](build/machines/truenas.md#creating-pools). Every `fast`
 PV now points at nothing: delete the PVCs, let Flux recreate them empty, then
 restore each row of the table above. OpenBao is re-initialised per
