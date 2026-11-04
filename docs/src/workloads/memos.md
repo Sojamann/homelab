@@ -2,7 +2,8 @@
 
 ## What it's for
 
-Note taking for the household, on trial -- if it sticks, other notes may
+Note taking for the household, on trial against [AFFiNE](affine.md) -- see
+[Ending the trial](affine.md#ending-the-trial). If it sticks, other notes may
 move here. Each person has their own notes; sharing is per memo. Using it is
 upstream: [Memos docs](https://usememos.com/docs).
 

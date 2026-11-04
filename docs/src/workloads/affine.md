@@ -136,8 +136,10 @@ force with `kubectl -n affine annotate es affine-config force-sync=$(date +%s) -
 **Updates.** Image tag pinned in `server.yaml`, both containers; Renovate
 proposes bumps (see [Maintenance](../maintenance.md)). The initContainer
 migrates before the new server starts. The postgres image in `database.yaml`
-(`imageName`, which Renovate does not see -- bump by hand) and the dump's in
-`dump.yaml` track the same major (17): bump both together.
+and the dump's in `dump.yaml` track the same major (17): Renovate bumps them
+in one `affine postgres` PR, and holds a major for approval on the dependency
+dashboard -- merging it is a CNPG in-place major upgrade (see
+[Maintenance](../maintenance.md#renovate)).
 
 ### Not enabled
 
@@ -147,12 +149,60 @@ migrates before the new server starts. The postgres image in `database.yaml`
 - **Search indexer** (Manticore). Search runs client-side.
 - **Metrics.** AFFiNE exposes none worth scraping; `/info` is the probe.
 
+## Ending the trial {#ending-the-trial}
+
+One of AFFiNE and [Memos](memos.md) goes. Data does not migrate between them
+-- move what you keep by hand (AFFiNE imports Markdown).
+
+**AFFiNE wins, and takes `notes.`** -- delete Memos first (below): the
+hostname can be on only one route.
+
+1. `apps/affine/route.yaml`: hostnames `notes.${app_domain}` **and**
+   `affine.${app_domain}` for a while, so old links keep working.
+   `secret.yaml`: `externalUrl` to `https://notes.${app_domain}`.
+2. Pocket ID client `AFFiNE`: callback `https://notes.<app_domain>/oauth/callback`
+   (Pocket ID accepts several; keep the old one until step 1's second
+   hostname goes).
+3. `apps/glance/glance.yml`: the bookmark's URL. Docs: this page, the
+   [Workloads](index.md) table.
+4. Restart the Deployment (the config is read at start).
+
+What it invalidates: **everyone logs in again** (the session cookie is per
+host); **share and invite links** already sent point at `affine.` -- they
+work while it is still on the route; **AFFiNE desktop/mobile apps** connected
+to `affine.` add the new server and sign in again. Nothing else: accounts
+(linked by email), docs, blobs, the signing key and DNS/TLS (a wildcard)
+are untouched.
+
+**Deleting the loser.** Either app:
+
+1. `flux/apps/<app>/`, `flux/apps/<app>.yaml`, its line in
+   `apps/kustomization.yaml`, its Glance bookmark, `flux/docs/<app>.md`.
+   Flux prunes the namespace. AFFiNE: also the two `apps/affine/**` rules in
+   `flux/renovate.json`.
+2. `platform/`: its `vault_kv_secret_v2` (and `random_password` /
+   `tls_private_key`), its `*_oidc_client_*` variables, their line in
+   `scripts/tofu.sh` and the `platform/README.md` table; then `mise run
+   platform apply`. AFFiNE: drop the `tls` provider from `versions.tf` too if
+   nothing else uses it. Remove the keys from `secrets/vault.yml`.
+3. Pocket ID: delete its OIDC client.
+4. Its restic repository on Garage:
+   ```sh
+   mise run s3 volsync rm --recursive s3://k8s-backups/<app>/
+   ```
+   (`memos/memos-data` or `affine/postgres-dump`).
+5. The static PV is `Retain`: delete the PV, then on the NAS
+   `/mnt/slow/k8s-csi/memos` or `/mnt/slow/k8s-csi/affine`.
+6. Docs: its workload page and every row naming it -- `grep -ri <app> docs/src
+   machines`. AFFiNE: [CloudNativePG](../platform/cloudnative-pg.md) goes back
+   to having no `Cluster`.
+
 ## Gotchas
 
 - **Accounts are linked by email.** Changing a user's email in Pocket ID
   gives them a new, empty account.
 - **Losing `kv/affine/app`'s `private-key`** (a new tofu state) logs everyone
   out and loses what AFFiNE encrypted with it.
-- **Deleting the app** -- remove its restic repository
-  (`k8s-backups/affine/`) too, and `slow/k8s-csi/affine` on the NAS by hand.
+- **Deleting the app** leaves its restic repository and NAS directory --
+  see [Ending the trial](#ending-the-trial).
 - **One pod, `Recreate`.** One migrator at a time.
