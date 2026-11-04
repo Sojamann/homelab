@@ -70,13 +70,6 @@ terraform {
       version = "~> 3.7"
     }
 
-    # AFFiNE's signing key -- an EC key AFFiNE would otherwise generate on
-    # first start and lose with the pod.
-    tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.1"
-    }
-
     # OpenBao's insides -- the kv mount, the policies, the Kubernetes auth
     # method. There is no `openbao` provider in the registry; OpenBao speaks
     # Vault's API and this is the client for it. Address and token arrive as
