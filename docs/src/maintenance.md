@@ -29,12 +29,6 @@ outstanding.
 - **Images in our own Zot registry** are skipped; `mise run image` pushes and
   bumps those (see [Zot](platform/zot.md)).
 
-- **A CNPG `Cluster`'s `imageName`** is found by a regex `customManager` in
-  `flux/renovate.json` (it is not an `image:` key). AFFiNE's and its dump's
-  postgres images share one `affine postgres` PR; a **major** waits for
-  approval on the dependency dashboard, as merging it makes CNPG upgrade the
-  database in place.
-
 Versions held in tofu `locals` are invisible to Renovate unless annotated on
 the line above:
 

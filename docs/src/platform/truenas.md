@@ -47,7 +47,7 @@ compose files: `machines/truenas/apps/garage/compose.yaml`,
 
 | Dataset | What | Consumer |
 |--|--|--|
-| `slow/k8s-csi` | one directory per `bulk` PV, plus static `syncthing/`, `memos/`, `affine/` | NFS, csi-driver-nfs |
+| `slow/k8s-csi` | one directory per `bulk` PV, plus static `syncthing/`, `memos/` | NFS, csi-driver-nfs |
 | `slow/garage/{meta,data}` | Garage LMDB and blocks, quota 1T | Garage |
 | `slow/ha-backups` | Home Assistant's own backups | SMB, user `ha-backup` |
 | `slow/node-exporter` | textfile metrics, rewritten every minute | node-exporter |

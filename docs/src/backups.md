@@ -48,8 +48,6 @@ route cannot apply. *Other* lists the incidental copies under
 | **Syncthing** config + keys (`syncthing-config`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
 | **Memos** attachments (`slow/k8s-csi/memos`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
 | **Memos** db (`memos-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
-| **AFFiNE** blobs (`slow/k8s-csi/affine`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
-| **AFFiNE** postgres (CNPG `affine-pg`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6, via the nightly dump | signing key (tofu state) | n/a | ✗ | last dump on `postgres-dump` |
 | **DHS** postgres (external Hetzner box) | n/a | n/a | n/a | ✓ d14 w8 m6, via the nightly dump | backup role password | n/a | ✗ | last dump on `postgres-dump` |
 | **Kassenbuch** (`kassenbuch-data`, bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | password hash | n/a | ✗ | |
 | **Supplement tracker** (bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
@@ -261,13 +259,10 @@ zvol -- `kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: 
 | `pocket-id-state` | `pocket-id` | `00:45` | `infrastructure/configs/pocket-id/backup.yaml` | 1000 |
 | `postgres-dump` | `dhs` | `01:00` | `apps/dhs/backup.yaml` | 70 |
 | `memos-data` | `memos` | `01:15` | `apps/memos/backup.yaml` | 1000 |
-| `postgres-dump` | `affine` | `01:30` | `apps/affine/backup.yaml` | 70 |
 
 `postgres-dump` holds a `pg_dump -Fc` of the DHS box, written by a CronJob at
 `00:30` (`apps/dhs/dump.yaml`) and alerted on by `DhsDumpStale` -- see
-[DHS](workloads/dhs.md). AFFiNE's is the same, of its CNPG `Cluster`, at
-`00:45` (`apps/affine/dump.yaml`, `AffineDumpStale`) -- see
-[AFFiNE](workloads/affine.md). Its `Cluster`'s own PVC is not backed up.
+[DHS](workloads/dhs.md).
 
 Deliberately not backed up: OpenBao (tofu rebuilds its contents), Prometheus
 and Alertmanager (history only), and `bulk` (on the mirror, under ZFS
@@ -310,7 +305,7 @@ mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups
 starts a run; **while it is set the schedule is ignored**, so remove it after.
 
 ```sh
-SRCS="vaultwarden/vaultwarden-data syncthing/syncthing-config pocket-id/pocket-id-state memos/memos-data dhs/postgres-dump affine/postgres-dump"
+SRCS="vaultwarden/vaultwarden-data syncthing/syncthing-config pocket-id/pocket-id-state memos/memos-data dhs/postgres-dump"
 for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type merge \
   -p '{"spec":{"trigger":{"manual":"run-'"$(date +%F)"'"}}}'; done
 kubectl get replicationsource -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,LAST_MANUAL:.status.lastManualSync,RESULT:.status.latestMoverStatus.result
@@ -525,7 +520,6 @@ Not routes you plan around, but they exist:
   destructive. By hand; its contents are rebuilt by tofu anyway. See
   [OpenBao](platform/openbao.md).
 - **DHS** -- the last dump stays on `postgres-dump` until the next run.
-- **AFFiNE** -- likewise, its last dump on `postgres-dump`.
 
 ## Not covered {#not-covered}
 
@@ -550,7 +544,7 @@ Not routes you plan around, but they exist:
 - **The DHS box** beyond its database: compose files, tailscale state.
 - **`.vault-pass`** -- not committed; its second copy is in the password
   managers.
-- **Failures outside Prometheus.** Only VolSync and the DHS and AFFiNE dumps alert from
+- **Failures outside Prometheus.** Only VolSync and the DHS dump alert from
   Prometheus. A failed PBS job or ZFS task reaches Telegram only through
   PVE's / PBS's / TrueNAS's own notifications (set up in the UI, not in this
   repo); a failed HA backup is seen only by looking. SMART tests are not set up,

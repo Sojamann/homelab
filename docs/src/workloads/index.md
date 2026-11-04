@@ -8,8 +8,7 @@ gateway: LAN and tailnet only, never public (see
 |--|--|--|--|
 | [Vaultwarden](vaultwarden.md) | password manager | LAN + tailnet, `passwords.<app_domain>` | ns `vaultwarden` |
 | [Syncthing](syncthing.md) | always-on sync hub, a copy of every file on the NAS | LAN + tailnet, `sync.<app_domain>` (GUI), `:22000` (sync) | ns `syncthing` |
-| [Memos](memos.md) | notes, on trial against AFFiNE | LAN + tailnet, `notes.<app_domain>` | ns `memos` |
-| [AFFiNE](affine.md) | docs and whiteboards, on trial against Memos | LAN + tailnet, `affine.<app_domain>` | ns `affine` |
+| [Memos](memos.md) | notes, on trial | LAN + tailnet, `notes.<app_domain>` | ns `memos` |
 | [Kassenbuch](kassenbuch.md) | the Verein's cash book | LAN + tailnet, `kassenbuch.<app_domain>` | ns `kassenbuch` |
 | [Supplement tracker](supplement-tracker.md) | household supplement plan and daily ticks | LAN + tailnet, `supplements.<app_domain>` | ns `supplement-tracker` |
 | [Glance](glance.md) | lab start page, release tracking | LAN + tailnet, `dash.<app_domain>` | ns `glance` |

@@ -113,8 +113,7 @@ Rules:
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
 │   ├── syncthing/   a static PV, made by hand -- see below
-│   ├── memos/       likewise
-│   └── affine/      likewise
+│   └── memos/       likewise
 ├── garage/          S3, see S3 (Garage)
 │   ├── meta         metadata DB
 │   └── data         object blocks
@@ -181,12 +180,6 @@ Memos' attachments are the same kind of static PV (see
 
 ```sh
 mkdir /mnt/slow/k8s-csi/memos && chown 1000:1000 /mnt/slow/k8s-csi/memos
-```
-
-AFFiNE's blobs likewise (see [AFFiNE](../docs/src/workloads/affine.md)):
-
-```sh
-mkdir /mnt/slow/k8s-csi/affine && chown 1000:1000 /mnt/slow/k8s-csi/affine
 ```
 
 Personal files live there, not in `users/<name>/files` -- that share stays as

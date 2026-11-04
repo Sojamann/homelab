@@ -13,7 +13,7 @@ breaks without it.
 | [OpenBao + external-secrets](openbao.md) | workload secrets | ns `openbao`, `external-secrets` | no new or rotated secrets |
 | [Pocket ID](pocket-id.md) | SSO (OIDC, passkeys) | ns `pocket-id` | SSO logins; break-glass logins still work |
 | [Zot](zot.md) | registry for own images | ns `zot` | own apps cannot (re)pull |
-| [CloudNativePG](cloudnative-pg.md) | postgres operator | ns `cnpg-system` | one `Cluster`, AFFiNE's |
+| [CloudNativePG](cloudnative-pg.md) | postgres operator | ns `cnpg-system` | nothing today: no `Cluster` exists |
 | [VPN VM](vpn.md) | tailnet subnet router, exit node | VM 160 on titan | no remote access |
 
 Covered inside a topic, no page of their own:

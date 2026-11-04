@@ -43,14 +43,11 @@ graph TD
 | `pocket-id-state` | `fast` | 1Gi | VolSync |
 | `memos-data` | `fast` | 1Gi | VolSync |
 | `postgres-dump` (DHS) | `fast` | 5Gi | VolSync |
-| `affine-pg-1` (CNPG) | `fast` | 5Gi | via `postgres-dump` |
-| `postgres-dump` (AFFiNE) | `fast` | 5Gi | VolSync |
 | `data-openbao-0` | `fast` | 1Gi | rebuilt by tofu |
 | Prometheus | `fast` | 20Gi (capped at 18GB, 30d) | not kept |
 | Alertmanager | `fast` | 1Gi | not kept |
 | `syncthing-data` -> `slow/k8s-csi/syncthing` | `bulk`, static PV | 1Ti (label only) | ZFS snapshots |
 | `memos-assets` -> `slow/k8s-csi/memos` | `bulk`, static PV | 5Gi (label only) | ZFS snapshots |
-| `affine-storage` -> `slow/k8s-csi/affine` | `bulk`, static PV | 10Gi (label only) | ZFS snapshots |
 | `kassenbuch-data` | `bulk` | 10Gi | ZFS snapshots |
 | `supplement-tracker-data` | `bulk` | 1Gi | ZFS snapshots |
 | `zot-data` | `bulk` | 20Gi (label only) | ZFS snapshots |
@@ -149,11 +146,10 @@ one directory per PV and has no API to the NAS, which is why the dataset
 - **`no_root_squash`.** The driver and the kubelet (`fsGroup`) both `chown` as
   root on the mount; squashed, the volume mounts and the pod cannot write. So
   anything that can reach `10.212.4.150` on k8s is root on the share.
-- **Syncthing's files, Memos' attachments and AFFiNE's blobs are static
-  `Retain` PVs** onto `slow/k8s-csi/syncthing`, `slow/k8s-csi/memos` and
-  `slow/k8s-csi/affine`, made by hand, so no PVC delete can take them. See
-  [Syncthing](workloads/syncthing.md), [Memos](workloads/memos.md),
-  [AFFiNE](workloads/affine.md).
+- **Syncthing's files and Memos' attachments are static `Retain` PVs** onto
+  `slow/k8s-csi/syncthing` and `slow/k8s-csi/memos`, made by hand, so no PVC
+  delete can take them. See [Syncthing](workloads/syncthing.md),
+  [Memos](workloads/memos.md).
 
 ## Admin
 
