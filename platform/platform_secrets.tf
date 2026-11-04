@@ -193,6 +193,32 @@ resource "vault_kv_secret_v2" "memos" {
 }
 
 ####################################
+#              AFFINE              #
+####################################
+
+# The key AFFiNE signs tokens and encrypts data with -- losing it logs everyone
+# out and loses what it encrypted. A SEC1 P-256 PEM, the format AFFiNE itself
+# generates. No admin password: AFFiNE's admin is made in its first-visit
+# setup, and kept in Vaultwarden.
+resource "tls_private_key" "affine" {
+  algorithm   = "ECDSA"
+  ecdsa_curve = "P256"
+}
+
+resource "vault_kv_secret_v2" "affine" {
+  mount = vault_mount.kv.path
+  name  = "affine/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    private-key        = tls_private_key.affine.private_key_pem
+    oidc-client-id     = var.affine_oidc_client_id
+    oidc-client-secret = var.affine_oidc_client_secret
+  })
+}
+
+####################################
 #             VOLSYNC              #
 ####################################
 

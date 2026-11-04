@@ -70,6 +70,8 @@ Vaultwarden, Grafana and Memos values it only carries: they are written into Ope
 | `TF_VAR_grafana_oidc_client_secret`   | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_memos_oidc_client_id`         | `secrets/vault.yml` | Memos' Pocket ID client               |
 | `TF_VAR_memos_oidc_client_secret`     | `secrets/vault.yml` | its secret                            |
+| `TF_VAR_affine_oidc_client_id`        | `secrets/vault.yml` | AFFiNE's Pocket ID client             |
+| `TF_VAR_affine_oidc_client_secret`    | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_bao_oidc_client_id`           | `secrets/vault.yml` | OpenBao's Pocket ID client            |
 | `TF_VAR_bao_oidc_client_secret`       | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_tailscale_operator_client_id` | `secrets/vault.yml` | the tailscale operator's OAuth client |

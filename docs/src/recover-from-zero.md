@@ -87,10 +87,11 @@ generic [VolSync restore](backups.md#volsync), values from its page:
 
 | Order | PVC | Page | Note |
 |--|--|--|--|
-| 1 | `pocket-id-state` | [Pocket ID](platform/pocket-id.md) | first: SSO for Grafana, OpenBao, Proxmox, PBS, Memos. Its Kustomization is `infrastructure` -- suspending it pauses every controller |
+| 1 | `pocket-id-state` | [Pocket ID](platform/pocket-id.md) | first: SSO for Grafana, OpenBao, Proxmox, PBS, Memos, AFFiNE. Its Kustomization is `infrastructure` -- suspending it pauses every controller |
 | 2 | `vaultwarden-data` | [Vaultwarden](workloads/vaultwarden.md) | |
 | 3 | `syncthing-config` | [Syncthing](workloads/syncthing.md) | device keys: without them every device re-pairs |
 | 4 | `memos-data` | [Memos](workloads/memos.md) | the notes |
+| 5 | `affine-pg` (via `postgres-dump`) | [AFFiNE](workloads/affine.md) | the CNPG `Cluster` comes up empty: `pg_restore` the dump into it, per its page |
 | -- | `postgres-dump` | [DHS](workloads/dhs.md) | nothing to restore: it is a staging copy, the history stays in restic |
 
 **Restore as of before the rebuild.** Flux creates each ReplicationSource
@@ -107,12 +108,14 @@ still there: scale the app to 0, copy the old directory's contents into the
 new one on the NAS, scale up -- as in
 [ZFS snapshots, *Restore*](backups.md#zfs-snapshots) with the live directory
 as source. Zot can instead be refilled by pushing the images again.
-Syncthing's files and Memos' attachments are static PVs onto
-`slow/k8s-csi/syncthing` and `slow/k8s-csi/memos` and need nothing.
+Syncthing's files, Memos' attachments and AFFiNE's blobs are static PVs onto
+`slow/k8s-csi/syncthing`, `slow/k8s-csi/memos` and `slow/k8s-csi/affine`
+and need nothing.
 
 **Not restored, rebuilt:** Prometheus and Alertmanager history (gone),
 Grafana (stateless), Glance (stateless), OpenBao (from tofu), CloudNativePG
-(no databases).
+(the operator; AFFiNE's database is in the table above), AFFiNE's Valkey
+(cache).
 
 ## How to tell you're done
 
@@ -131,7 +134,7 @@ pvesm list pbs-s3 | tail                    # tonight's 23:00 run is there tomor
   [Workloads](workloads/index.md).
 - From the tailnet, away from home: `https://passwords.<app_domain>` loads
   ([Networking](networking.md#tailscale)).
-- Pocket ID login works on Grafana, OpenBao, Proxmox, PBS and Memos.
+- Pocket ID login works on Grafana, OpenBao, Proxmox, PBS, Memos and AFFiNE.
 - `git status` and `git -C secrets status -sb` clean and pushed -- the new
   root token and any regenerated state are backed up.
 - Update **Last verified** on every route you restored.
