@@ -79,23 +79,6 @@ image loads.
 
 ## Admin
 
-**First deploy.**
-
-1. In Pocket ID: *Administration -> OIDC Clients -> Add*. Name `Mealie`,
-   callback URL `https://recipes.<app_domain>/login`, allowed groups
-   `admins`, `household`. Check each of those users has an email, marked
-   verified.
-2. Client id and secret into `secrets/vault.yml` as `mealie_oidc_client_id` /
-   `mealie_oidc_client_secret`, then `mise run platform apply`.
-3. Merge; Flux deploys.
-4. Log in through Pocket ID as a member of `admins`. A setup wizard opens --
-   Mealie shows it to admins while its seeded user exists. Skip it (*already
-   set up, bring me to the homepage*): its account step edits *your* SSO
-   user, and a changed email breaks the link.
-5. In *Admin -> Users*, delete `changeme@example.com` -- Mealie seeds it with
-   the password `MyPassword`, and the API accepts it until it is gone. The
-   wizard goes with it.
-
 **Adding another household** (say, parents: shared recipes, their own meal
 plan and shopping list):
 
@@ -129,4 +112,7 @@ notes for a major.
 - **Changing a user's email in Pocket ID gives them a new, empty account**
   here: email is the SSO link key. Change it in both, or not at all.
 - **No verified email, no login.** Mealie checks `email_verified`.
+- **Renaming the group or household in the UI** strands new SSO users: they
+  are placed by name (`DEFAULT_GROUP` / `DEFAULT_HOUSEHOLD`, default `Home` /
+  `Family`). Rename both there and in `server.yaml`'s env.
 - **One pod, `Recreate`.** SQLite has one writer and the data volume is RWO.
