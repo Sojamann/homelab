@@ -15,8 +15,8 @@ The household's recipes, meal plan and shopping list. Recipes come in by URL
   Pocket ID, or Mealie refuses the login. Who may log in is the Pocket ID
   client's allowed groups, `admins` + `household`; `admins` are admins here
   too, re-read every login. Sessions last about a week (remember-me).
-- **No break-glass account.** The default admin is deleted at first deploy,
-  and the password form is hidden.
+- **No break-glass account.** Mealie's seeded admin (`changeme@example.com`)
+  is deleted, and the password form is hidden.
 
 ### Getting in without Pocket ID {#break-glass}
 

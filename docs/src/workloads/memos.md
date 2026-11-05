@@ -74,17 +74,6 @@ attachment opens.
 
 ## Admin
 
-**First deploy.**
-
-1. In Pocket ID: *Administration -> OIDC Clients -> Add*. Name `Memos`,
-   callback URL `https://notes.<app_domain>/auth/callback`, allowed groups
-   `admins`, `household`.
-2. Client id and secret into `secrets/vault.yml` as `memos_oidc_client_id` /
-   `memos_oidc_client_secret`, then `mise run platform apply`.
-3. Make `/mnt/slow/k8s-csi/memos` on the NAS (see
-   [machines/truenas.md](../build/machines/truenas.md)).
-4. Merge; Flux deploys. `admin` exists from the first start.
-
 **What git owns** (`apps/memos/instance.json`, applied on every start; the
 admin UI refuses changes to it):
 
