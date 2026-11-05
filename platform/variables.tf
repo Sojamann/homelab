@@ -106,6 +106,17 @@ variable "memos_oidc_client_secret" {
   sensitive   = true
 }
 
+variable "mealie_oidc_client_id" {
+  description = "Mealie's client id in Pocket ID"
+  type        = string
+}
+
+variable "mealie_oidc_client_secret" {
+  description = "Mealie's client secret in Pocket ID -- shown once, at registration"
+  type        = string
+  sensitive   = true
+}
+
 variable "bao_oidc_client_id" {
   description = "OpenBao's client id in Pocket ID"
   type        = string

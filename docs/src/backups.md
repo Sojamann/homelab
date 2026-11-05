@@ -48,6 +48,7 @@ route cannot apply. *Other* lists the incidental copies under
 | **Syncthing** config + keys (`syncthing-config`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
 | **Memos** attachments (`slow/k8s-csi/memos`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
 | **Memos** db (`memos-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
+| **Mealie** (`mealie-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
 | **DHS** postgres (external Hetzner box) | n/a | n/a | n/a | ✓ d14 w8 m6, via the nightly dump | backup role password | n/a | ✗ | last dump on `postgres-dump` |
 | **Kassenbuch** (`kassenbuch-data`, bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | password hash | n/a | ✗ | |
 | **Supplement tracker** (bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
@@ -259,6 +260,7 @@ zvol -- `kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: 
 | `pocket-id-state` | `pocket-id` | `00:45` | `infrastructure/configs/pocket-id/backup.yaml` | 1000 |
 | `postgres-dump` | `dhs` | `01:00` | `apps/dhs/backup.yaml` | 70 |
 | `memos-data` | `memos` | `01:15` | `apps/memos/backup.yaml` | 1000 |
+| `mealie-data` | `mealie` | `01:30` | `apps/mealie/backup.yaml` | 1000 |
 
 `postgres-dump` holds a `pg_dump -Fc` of the DHS box, written by a CronJob at
 `00:30` (`apps/dhs/dump.yaml`) and alerted on by `DhsDumpStale` -- see
@@ -305,7 +307,7 @@ mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups
 starts a run; **while it is set the schedule is ignored**, so remove it after.
 
 ```sh
-SRCS="vaultwarden/vaultwarden-data syncthing/syncthing-config pocket-id/pocket-id-state memos/memos-data dhs/postgres-dump"
+SRCS="vaultwarden/vaultwarden-data syncthing/syncthing-config pocket-id/pocket-id-state memos/memos-data mealie/mealie-data dhs/postgres-dump"
 for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type merge \
   -p '{"spec":{"trigger":{"manual":"run-'"$(date +%F)"'"}}}'; done
 kubectl get replicationsource -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,LAST_MANUAL:.status.lastManualSync,RESULT:.status.latestMoverStatus.result

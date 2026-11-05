@@ -42,6 +42,7 @@ graph TD
 | `syncthing-config` | `fast` | 2Gi | VolSync |
 | `pocket-id-state` | `fast` | 1Gi | VolSync |
 | `memos-data` | `fast` | 1Gi | VolSync |
+| `mealie-data` | `fast` | 5Gi | VolSync |
 | `postgres-dump` (DHS) | `fast` | 5Gi | VolSync |
 | `data-openbao-0` | `fast` | 1Gi | rebuilt by tofu |
 | Prometheus | `fast` | 20Gi (capped at 18GB, 30d) | not kept |

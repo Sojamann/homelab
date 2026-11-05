@@ -86,6 +86,7 @@ secret costs a re-registration, not access.
 | Proxmox | `admins` | by hand, see [Proxmox](proxmox.md) | `root@pam` |
 | PBS | `admins` | by hand, see [PBS](pbs.md) | `root@pam` |
 | Memos | `admins`, `household` | `apps/memos/instance.json`, see [Memos](../workloads/memos.md) | user `admin` |
+| Mealie | `admins`, `household` | env in `apps/mealie/server.yaml`, see [Mealie](../workloads/mealie.md) | `kubectl exec` password reset |
 
 TrueNAS and Vaultwarden do not use it.
 
@@ -103,6 +104,6 @@ TrueNAS and Vaultwarden do not use it.
 
 ## What breaks without it
 
-SSO logins to Grafana, OpenBao, Proxmox, PBS and Memos -- each falls back to its
+SSO logins to Grafana, OpenBao, Proxmox, PBS, Memos and Mealie -- each falls back to its
 break-glass login (table above). Nothing else; apps without SSO are
 unaffected.

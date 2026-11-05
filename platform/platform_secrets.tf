@@ -193,6 +193,24 @@ resource "vault_kv_secret_v2" "memos" {
 }
 
 ####################################
+#              MEALIE              #
+####################################
+
+# No admin here: Mealie seeds its own, deleted at first deploy -- see the
+# workload page.
+resource "vault_kv_secret_v2" "mealie" {
+  mount = vault_mount.kv.path
+  name  = "mealie/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    oidc-client-id     = var.mealie_oidc_client_id
+    oidc-client-secret = var.mealie_oidc_client_secret
+  })
+}
+
+####################################
 #             VOLSYNC              #
 ####################################
 

@@ -35,7 +35,7 @@ graph TD
       subgraph talos["VM 4010 talos-cp-1, 10.212.4.10, VLAN 40"]
         K8S["Kubernetes, Cilium<br/>Gateway 10.212.4.200"]
         INFRA["Flux, OpenBao, Pocket ID, Zot,<br/>CNPG, VolSync, monitoring"]
-        APPS["Vaultwarden, Syncthing, Memos,<br/>Kassenbuch, Supplement tracker,<br/>Glance, DHS backup"]
+        APPS["Vaultwarden, Syncthing, Memos,<br/>Mealie, Kassenbuch,<br/>Supplement tracker, Glance, DHS backup"]
       end
     end
   end
