@@ -2,7 +2,7 @@
 
 A UniFi gateway carries five VLANs, the lab's DNS and the firewall. The
 cluster is one address on its own VLAN. Remote access is Tailscale through
-one VM. Nothing is published to the internet: Cloudflare holds the zone, but
+one VM, with a Raspberry Pi as the second router. Nothing is published to the internet: Cloudflare holds the zone, but
 only to prove domain control to Let's Encrypt.
 
 Everything here except the VPN guest is the network layer (`network/`,
@@ -21,7 +21,7 @@ graph LR
   subgraph trusted["Trusted 10.212.2.0/24, VLAN 20"]
     DEV["home devices, DHCP .6-.149"]
     NAS1["NAS .150"]
-    HOSTS["Proxmox hosts .151-.159"]
+    HOSTS["Proxmox hosts .151-.156<br/>pi router .159"]
     GUESTS["VMs .160+<br/>vpn, ha, pbs"]
   end
   subgraph k8s["k8s 10.212.4.0/24, VLAN 40"]
@@ -29,7 +29,7 @@ graph LR
     GWY["Gateway .200<br/>*.app"]
     NAS2["NAS .150<br/>NVMe-oF, NFS, API, S3"]
   end
-  TSC -->|WireGuard| GUESTS
+  TSC -->|WireGuard| GUESTS & HOSTS
   GUESTS -->|"SNAT .160"| trusted & k8s
   DEV --> GWY
   NODE --> NAS2
@@ -57,7 +57,7 @@ but wardriving databases tie SSIDs to coordinates and the repo is public.
 | `.1` | gateway, resolver |
 | `.6-.149` | DHCP; fixed devices (the TV) get a reservation in `unifi_clients.tf` |
 | `.150` | the NAS |
-| `.151-.159` | physical lab machines, static (titan `.151` ... dione `.156`) |
+| `.151-.159` | physical lab machines, static (titan `.151` ... dione `.156`); the `pi` router `.159` (a reservation) |
 | `.160+` | VMs: vpn `.160`, Home Assistant `.161`, PBS `.162` |
 
 **k8s** addresses:
@@ -185,7 +185,8 @@ through it.
 ## Tailscale {#tailscale}
 
 Remote access. SaaS control plane; the lab's side is the `vpn` VM (160), a
-subnet router and exit node, tagged `tag:lab-router`. The VM itself:
+subnet router and exit node, tagged `tag:lab-router`, and the Raspberry Pi
+`pi` (`.159`), a second one with the same tag for when titan is down. Both:
 [VPN VM](platform/vpn.md). Policy and DNS are tofu, in
 `network/tailscale_policy.tf` and `network/tailscale_dns.tf`.
 
@@ -292,6 +293,6 @@ democratic-csi already holds a full-admin API key.
 - **`k8s-deny-internal`'s `connection_states` is ignored by tofu** (provider
   bug: written correctly, read back as null). Verify it in the UI; tofu cannot
   tell you when it drifts.
-- **Never add `--snat-subnet-routes=false`** on the `vpn` VM -- see above.
+- **Never add `--snat-subnet-routes=false`** on `vpn` or `pi` -- see above.
 - **A name in both `network/` and `guests/`** -- the two layers fight over the
   record.

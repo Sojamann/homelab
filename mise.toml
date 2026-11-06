@@ -36,6 +36,10 @@ run = "./scripts/docs.sh"
 description = "Configure the machines"
 run = "ansible-playbook machine-config/site.yml"
 
+[tasks.update]
+description = "Patch Proxmox, PBS and the routers (`-- --check` lists pending, `-- -e reboot_ok=true` reboots Proxmox)"
+run = "ansible-playbook machine-config/update.yml"
+
 [tasks.network]
 description = "Apply the network layer (args are forwarded to tofu)"
 run = "./scripts/tofu.sh network"

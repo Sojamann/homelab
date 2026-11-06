@@ -27,6 +27,9 @@ locals {
     rhea : "10.212.2.154",
     iapetus : "10.212.2.155",
     dione : "10.212.2.156",
+
+    # the second tailscale subnet router, a Raspberry Pi
+    pi : "10.212.2.159",
   }
 
   # The machines running Proxmox, as opposed to the NAS. Only the firewall

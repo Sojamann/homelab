@@ -1,6 +1,6 @@
 ---
-- name: Configure physical hosts
-  hosts: all
+- name: Configure the Proxmox hosts
+  hosts: proxmox
   gather_facts: true
   serial: 1
   # A failed run must still restart what earlier tasks changed -- otherwise a
@@ -41,5 +41,4 @@
 
   roles:
     - common
-    - role: proxmox
-      when: "'proxmox' in group_names"
+    - proxmox

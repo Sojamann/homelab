@@ -1,15 +1,11 @@
 ---
 # Proxmox VE 9 is Debian 13 (trixie) and uses deb822 .sources files.
-pve_release: trixie
+pve_release: "{{ os_release }}"
 
 # Enterprise repositories to disable. Both 401 without a subscription;
 pve_enterprise_sources:
   - pve-enterprise
   - ceph
-
-# Reboots happen automatically on a host's first run only. Set true to allow a
-# reboot on an already-initialised host (e.g. to pick up a new kernel).
-reboot_ok: false
 
 # Per-host NIC driver workarounds, set in host_vars. Each entry names an
 # interface, the reason it needs one, and the ethtool argument lists to apply;

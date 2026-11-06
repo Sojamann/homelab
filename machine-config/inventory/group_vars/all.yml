@@ -10,3 +10,7 @@ lab_domain: "lab.{{ zone }}"
 # alongside for the places that genuinely need a name -- the certificate and
 # the Proxmox API URL.
 fqdn: "{{ inventory_hostname }}.{{ lab_domain }}"
+
+# Reboots of an already-initialised Proxmox host are opt-in -- one takes every
+# guest down with it. `-e reboot_ok=true` allows them.
+reboot_ok: false

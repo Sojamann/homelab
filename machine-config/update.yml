@@ -1,0 +1,85 @@
+---
+# Patches every host. Order: PBS, then the routers one at a time, then
+# Proxmox -- whose reboot takes every guest down and so stays opt-in.
+
+- name: Patch PBS
+  hosts: backup
+  gather_facts: true
+
+  pre_tasks:
+    # A reboot mid-backup or mid-GC kills the task.
+    - name: Wait until no PBS task is running
+      ansible.builtin.command: proxmox-backup-manager task list --output-format json
+      register: pbs_tasks
+      check_mode: false
+      changed_when: false
+      until: pbs_tasks.stdout | from_json | length == 0
+      retries: 60
+      delay: 60
+
+  roles:
+    - role: upgrade
+      upgrade_reboot: true
+
+- name: Patch the routers
+  hosts: routers
+  gather_facts: true
+  serial: 1
+
+  roles:
+    - role: upgrade
+      upgrade_reboot: true
+
+  post_tasks:
+    # Not just SSH: the next router goes down only once this one routes again.
+    - name: Wait until tailscale is back up
+      ansible.builtin.command: tailscale status --json
+      register: ts_status
+      check_mode: false
+      changed_when: false
+      become: false
+      until: (ts_status.stdout | from_json).BackendState == 'Running'
+      retries: 30
+      delay: 10
+
+- name: Patch the Proxmox hosts
+  hosts: proxmox
+  gather_facts: true
+  serial: 1
+  force_handlers: true
+
+  pre_tasks:
+    # The pi is the way back in while titan reboots.
+    - name: Assert the pi router is up
+      ansible.builtin.command: tailscale status --json
+      register: pi_ts
+      delegate_to: pi
+      become: false
+      check_mode: false
+      changed_when: false
+      failed_when: (pi_ts.stdout | from_json).BackendState != 'Running'
+      when: reboot_ok | bool
+
+  roles:
+    - role: upgrade
+      upgrade_reboot: "{{ reboot_ok }}"
+
+  post_tasks:
+    - name: Remove the subscription nag
+      ansible.builtin.include_role:
+        name: proxmox
+        tasks_from: nag.yml
+
+    - name: Wait for every on-boot guest to be running
+      ansible.builtin.shell: |
+        set -eu
+        for id in $(qm list | awk 'NR>1 {print $1}'); do
+          qm config "$id" | grep -q '^onboot: 1' || continue
+          qm status "$id" | grep -q 'status: running' || { echo "$id"; exit 1; }
+        done
+      register: guests_up
+      changed_when: false
+      until: guests_up.rc == 0
+      retries: 30
+      delay: 20
+      when: upgrade_rebooted

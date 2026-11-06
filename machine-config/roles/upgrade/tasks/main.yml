@@ -1,0 +1,73 @@
+---
+# Patches only. A major arrives through a repo change; pinning the release
+# per host turns that into a failed run instead of a silent dist-upgrade.
+- name: Assert the release has not moved
+  ansible.builtin.assert:
+    that: ansible_distribution_release == os_release
+    fail_msg: >-
+      {{ inventory_hostname }} runs {{ ansible_distribution_release }}, pinned
+      {{ os_release }}. Majors are by hand -- see docs/src/maintenance.md.
+
+# Also in check mode, or --check would list against a stale cache.
+- name: Refresh the apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  check_mode: false
+  timeout: "{{ upgrade_cache_timeout }}"
+
+- name: List pending upgrades
+  ansible.builtin.command: apt-get -s dist-upgrade
+  register: upgrade_pending
+  check_mode: false
+  changed_when: false
+  when: ansible_check_mode
+
+- name: Show pending upgrades
+  ansible.builtin.debug:
+    msg: "{{ upgrade_pending.stdout_lines | select('match', '^Inst ') | map('split', ' ') | map(attribute=1) | list }}"
+  when: ansible_check_mode
+
+# full-upgrade: a plain upgrade holds back any update that needs to install or
+# remove a package, leaving PVE half-upgraded.
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+  timeout: "{{ upgrade_timeout }}"
+
+# Debian and Raspberry Pi OS do not reliably write reboot-required for a
+# kernel, so also compare the running kernel with the newest installed one of
+# the same flavour (pve, generic, rpi-v8, ...).
+- name: Check whether a reboot is pending
+  ansible.builtin.shell: |
+    set -eu
+    [ -e /var/run/reboot-required ] && { echo yes; exit 0; }
+    running=$(uname -r)
+    flavour=$(echo "$running" | sed -E 's/^[0-9.]+(-[0-9]+)?(\+[a-z]+)?-//')
+    newest=$(ls /lib/modules | grep -- "-$flavour\$" | sort -V | tail -n1)
+    [ -n "$newest" ] && [ "$newest" != "$running" ] && echo yes || echo no
+  register: upgrade_reboot_check
+  check_mode: false
+  changed_when: false
+
+- name: Reboot
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+  register: upgrade_reboot_result
+  when:
+    - upgrade_reboot_check.stdout == 'yes'
+    - upgrade_reboot | bool
+
+- name: Record whether the host rebooted
+  ansible.builtin.set_fact:
+    upgrade_rebooted: "{{ upgrade_reboot_result is changed and not ansible_check_mode }}"
+
+- name: Report a pending reboot that was not taken
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }} needs a reboot. Not taken; re-run with
+      -e reboot_ok=true.
+  when:
+    - upgrade_reboot_check.stdout == 'yes'
+    - not (upgrade_reboot | bool)

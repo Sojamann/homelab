@@ -3,6 +3,10 @@
 locals {
   fixed_clients = {
     "samsung-tv" = { mac = "fc:03:9f:f3:ad:39", network = "Trusted", ip = "10.212.2.139" }
+
+    # The second subnet router, off titan. Outside the DHCP pool, in the
+    # physical-machines range.
+    "pi" = { mac = "b8:27:eb:0c:fd:f6", network = "Trusted", ip = "10.212.2.159" }
   }
 }
 

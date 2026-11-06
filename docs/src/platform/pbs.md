@@ -13,8 +13,9 @@ its schedule and its restore steps: [Backups: PBS](../backups.md#pbs).
   `<name>@pocket-id` created by hand, autocreate off.
 - **Break-glass:** `root@pam` in the UI, or the VM 162 console in Proxmox.
   Its password is in the password managers.
-- **No SSH key** from the guests layer: PBS is installed from the ISO, not
-  cloud-init.
+- **SSH:** `ssh -i secrets/guests-ssh-key root@pbs.<lab_domain>`. The
+  guests key was added to root's `authorized_keys` by hand: PBS is installed
+  from the ISO, not cloud-init, so a rebuild needs it again.
 
 ## Where it runs
 
@@ -67,8 +68,8 @@ apply`, then `growpart` + `resize2fs` in the guest.
 [Build guide: Guests](../build/guests/README.md#backups), *Moving an existing
 datastore*. Prune, GC and verify are per datastore and must be recreated.
 
-**Updates.** By hand: the PBS UI's *Updates* or `apt full-upgrade`. Nothing
-automates them.
+**Updates.** `mise run update`; it waits for running PBS tasks before
+patching. See [Maintenance](../maintenance.md#patches).
 
 ## Gotchas
 

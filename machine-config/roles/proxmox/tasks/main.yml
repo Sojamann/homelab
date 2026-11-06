@@ -9,7 +9,10 @@
   ansible.builtin.import_tasks: repos.yml
 
 - name: Upgrade packages
-  ansible.builtin.import_tasks: upgrade.yml
+  ansible.builtin.include_role:
+    name: upgrade
+  vars:
+    upgrade_reboot: "{{ first_run or reboot_ok }}"
 
 - name: Remove the subscription nag
   ansible.builtin.import_tasks: nag.yml

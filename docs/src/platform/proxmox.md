@@ -86,10 +86,8 @@ and re-encrypts the file.
 set up by machine-config. Proxmox renews it; nothing watches it. The
 Cloudflare token is the same one cert-manager uses -- rotating it is two places.
 
-**Updates.** By hand: `apt full-upgrade`, or `mise run machine-config`,
-which runs `dist-upgrade`; a reboot happens only on a
-host's first run, otherwise `-e reboot_ok=true`. See
-[Maintenance](../maintenance.md).
+**Updates.** `mise run update`; a reboot only with `-e reboot_ok=true`, since
+it takes every guest down. See [Maintenance](../maintenance.md#patches).
 
 **Monitoring.** node-exporter `:9100` and pve-exporter `:9221` on the Trusted
 address, scraped through `metrics-allow-proxmox`. Alerts:

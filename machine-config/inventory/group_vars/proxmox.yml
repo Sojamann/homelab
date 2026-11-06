@@ -3,3 +3,6 @@
 # must run exactly once. This names the node they run against. Any node in the
 # cluster will do; it only has to be one of them, and it has to exist.
 cluster_primary: titan
+
+# Pinned so a repo change cannot pull in a major -- see roles/upgrade.
+os_release: trixie

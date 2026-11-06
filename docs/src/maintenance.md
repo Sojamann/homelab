@@ -45,9 +45,9 @@ GitHub Actions are pinned by commit SHA with the tag in a comment; Renovate
 bumps both. A push to `main` (a merged PR, a flux pointer bump) rebuilds this
 site via `.github/workflows/docs.yml`; a broken link fails it.
 
-Not covered by Renovate: TrueNAS itself and Proxmox packages (below), Home
-Assistant (updates itself from its UI), PBS and the VPN VM (apt by hand, like Proxmox), and
-`restic`, which is not pinned at all.
+Not covered by Renovate: TrueNAS itself, OS packages on Proxmox, PBS and the
+routers ([`mise run update`](#patches)), Home Assistant (updates itself from
+its UI), and `restic`, which is not pinned at all.
 
 ## Checklist
 
@@ -77,11 +77,8 @@ Assistant (updates itself from its UI), PBS and the VPN VM (apt by hand, like Pr
 
 ### Proxmox {#proxmox}
 
-- check for updates (`apt update && apt full-upgrade`), reboot on new kernel
-  (`mise run machine-config` does a `dist-upgrade` too, and re-applies the
-  subscription-nag patch an upgrade reverts)
+- monthly: [`mise run update`](#patches) -- Proxmox, PBS, `vpn`, `pi`
 - check backup jobs succeeded
-- same for the PBS and VPN VMs
 
 ### Certificates
 
@@ -114,6 +111,45 @@ verified** date on [Backups & restore](backups.md):
   is now
 
 Every route whose date says *never* is the first in line.
+
+## Host patches {#patches}
+
+`machine-config/update.yml` patches every host in the inventory with
+`apt dist-upgrade`, in this order:
+
+1. **PBS** -- waits until no PBS task runs, patches, reboots if needed.
+2. **Routers**, one at a time: `vpn`, then `pi`. Each reboots if needed and
+   must report tailscale `Running` before the next goes down, so the tailnet
+   always has a way in.
+3. **Proxmox** -- patches and re-applies the subscription-nag patch. A reboot
+   takes every guest down, so it is **opt-in**: with `reboot_ok`, the run
+   first asserts `pi` is up, then waits for every on-boot guest to run again.
+
+```sh
+mise run update -- --check              # pending packages + reboots, no changes
+mise run update                         # patch; Proxmox reboot deferred
+mise run update -- -e reboot_ok=true    # ...and reboot titan if a kernel waits
+mise run update -- -e upgrade_reboot=false   # patch all, reboot nothing
+```
+
+With `upgrade_reboot=false` each host that wants a reboot says so instead; a
+later plain run takes them, routers one at a time. Patching without a reboot
+still restarts upgraded services -- a `tailscale` update blips that router.
+
+"Needs a reboot" is `/var/run/reboot-required` or a newer installed kernel of
+the running flavour -- Debian does not always write the file.
+
+**A stuck apt fails the run**: the cache refresh after 5 minutes, the upgrade
+after 30 (`upgrade_cache_timeout`, `upgrade_timeout`). The usual cause is the
+host's DNS -- check `/etc/resolv.conf`. Ansible gives up but the process on the
+host may keep the apt lock; `ps -o pid,args -C apt-get,python3` finds it, and
+killing it is safe while it is only `apt update` (no `dpkg` running).
+
+**Patches only.** Each host's release is pinned (`os_release` in the
+inventory); a run on a host whose release moved fails. A major (PVE 9 -> 10,
+PBS, Ubuntu 24.04 -> 26.04, Raspberry Pi OS) is by hand: read the release
+notes, run the vendor's pre-check (`pve9to10` and the like), switch repos,
+upgrade, then bump `os_release`. Routers one at a time, Proxmox last.
 
 ## Talos upgrades {#talos}
 

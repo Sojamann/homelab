@@ -1,0 +1,8 @@
+---
+# Reboot when a new kernel (or anything else) asks for one.
+upgrade_reboot: false
+
+# Seconds before a stuck apt step fails the run instead of hanging it -- a
+# dead resolver or mirror otherwise never returns.
+upgrade_cache_timeout: 300
+upgrade_timeout: 1800

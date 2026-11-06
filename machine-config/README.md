@@ -1,23 +1,27 @@
 # Machine Config
 
-Ansible configures the machines. The [guests](../guests/README.md) layer then
-builds on top: **Ansible owns host state, Terraform owns what runs on the
-hosts.**
+Ansible configures the Proxmox hosts (`site.yml`) and patches every host
+in the inventory -- Proxmox, PBS, the `vpn` and `pi` routers (`update.yml`).
+The [guests](../guests/README.md) layer builds on top: **Ansible owns host
+state, Terraform owns what runs on the hosts.**
 
 Assumes [machines](../machines/README.md) is complete: the node is installed,
 reachable over SSH with a key, and already a member of a quorate cluster.
 
 How the hosts are run and restored: [Proxmox](../docs/src/platform/proxmox.md).
+Patching, order and reboots: [Maintenance](../docs/src/maintenance.md#patches).
 
 ## Running it
 
 ```sh
 mise run machine-config
 mise run machine-config -- --limit mimas
+mise run update -- --check
 ```
 
 `inventory/` is a plain, committed ansible inventory. Machines that do not
-exist yet stay commented out in `hosts.yml`.
+exist yet stay commented out in `hosts.yml`. PBS (as `root`) and the routers
+are reached with `secrets/guests-ssh-key`.
 
 ### Secrets
 
@@ -33,7 +37,7 @@ the value.
 | Assert cluster membership | Fails loudly if a node was never joined |
 | Disable enterprise repos | `pve-enterprise` **and** `ceph`, set `Enabled: no` rather than deleted -- an upgrade can recreate the file |
 | Add `pve-no-subscription` | deb822, since PVE 9 is Debian 13 |
-| `dist-upgrade` | `apt upgrade` would hold back PVE updates and half-upgrade the node |
+| `dist-upgrade` | The shared `upgrade` role, same as `update.yml`; `apt upgrade` would hold back PVE updates and half-upgrade the node |
 | Remove the subscription nag | Reapplied every run; every `pve-manager` upgrade reverts it |
 | VLAN-aware `vmbr0` | Required for VMs tagged onto VLAN 40 (k8s); the default bridge silently drops tags |
 | Per-host NIC quirks | `ethtool` settings that work around driver bugs, applied by a systemd unit bound to the device. Empty unless a host sets `nic_quirks` -- see [known hardware quirks](#known-hardware-quirks) |

@@ -20,6 +20,7 @@ graph TD
 
   subgraph home["home network"]
     GW["UniFi gateway<br/>VLANs, DNS, firewall<br/>10.212.x.1"]
+    PI["pi 10.212.2.159<br/>Raspberry Pi, 2nd subnet router"]
 
     subgraph nas["NAS 10.212.2.150 + 10.212.4.150<br/>UGREEN DXP4800 GT, TrueNAS"]
       FAST[("fast<br/>2x 1TB NVMe mirror")]
@@ -46,7 +47,7 @@ graph TD
   GARAGE --- SLOW
   INFRA -->|scrapes| NEXP
   INFRA -->|alerts| TG & HB
-  TS <-->|WireGuard| VPN
+  TS <-->|WireGuard| VPN & PI
   K8S -->|tailscale egress| DHS
   INFRA -->|pulls| GH
 ```
