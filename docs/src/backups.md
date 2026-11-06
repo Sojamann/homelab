@@ -57,7 +57,7 @@ route cannot apply. *Other* lists the incidental copies under
 | **Pocket ID** (`pocket-id-state`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | encryption key (tofu state) | n/a | ✗ | |
 | **OpenBao** (`data-openbao-0`, fast) | ✗ | n/a | n/a | ✗ | ✓ every value + seal key | n/a | ✗ | `bao operator raft snapshot`, by hand |
 | **Zot** (`zot-data`, bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | rebuildable from source |
-| **Prometheus, Alertmanager** (fast) | ✗ | n/a | n/a | ✗ | n/a | n/a | ✗ | history only, not kept |
+| **Prometheus, Alertmanager, VictoriaLogs** (fast) | ✗ | n/a | n/a | ✗ | n/a | n/a | ✗ | history only, not kept |
 | **VPN VM** (160) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | n/a | n/a | ✗ | |
 | **Talos VM** (4010) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | machine secrets (tofu state) | ✓ by hand, no schedule | ✗ | |
 | **PBS VM** (162) | n/a | ✗ excluded | n/a | n/a | n/a | n/a | ✗ | rebuilt by hand |
@@ -266,8 +266,8 @@ zvol -- `kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: 
 `00:30` (`apps/dhs/dump.yaml`) and alerted on by `DhsDumpStale` -- see
 [DHS](workloads/dhs.md).
 
-Deliberately not backed up: OpenBao (tofu rebuilds its contents), Prometheus
-and Alertmanager (history only), and `bulk` (on the mirror, under ZFS
+Deliberately not backed up: OpenBao (tofu rebuilds its contents), Prometheus,
+Alertmanager and VictoriaLogs (history only), and `bulk` (on the mirror, under ZFS
 snapshots). A new `fast` PVC that cannot be rebuilt gets a `backup.yaml`.
 
 A run: the controller clones the PVC, runs restic `backup` then `forget` in

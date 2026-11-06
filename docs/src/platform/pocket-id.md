@@ -81,7 +81,7 @@ secret costs a re-registration, not access.
 
 | Client | Groups | Configured in | Break-glass |
 |--|--|--|--|
-| Grafana | `admins`, `household` | [Monitoring](../monitoring.md) | admin form |
+| Grafana | `admins` | [Monitoring](../monitoring.md) | admin form |
 | OpenBao | `admins` | `platform_openbao.tf`, see [OpenBao](openbao.md) | root token |
 | Proxmox | `admins` | by hand, see [Proxmox](proxmox.md) | `root@pam` |
 | PBS | `admins` | by hand, see [PBS](pbs.md) | `root@pam` |

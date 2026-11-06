@@ -111,7 +111,7 @@ as source. Zot can instead be refilled by pushing the images again.
 Syncthing's files and Memos' attachments are static PVs onto
 `slow/k8s-csi/syncthing` and `slow/k8s-csi/memos` and need nothing.
 
-**Not restored, rebuilt:** Prometheus and Alertmanager history (gone),
+**Not restored, rebuilt:** Prometheus, Alertmanager and VictoriaLogs history (gone),
 Grafana (stateless), Glance (stateless), OpenBao (from tofu), CloudNativePG
 (no databases).
 

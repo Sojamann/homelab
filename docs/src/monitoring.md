@@ -8,7 +8,8 @@ A heartbeat outside the lab notices when all of that is down at once. The
 stack is kube-prometheus-stack (chart in
 `flux/infrastructure/controllers/kube-prometheus-stack/`); rules, scrapes and
 dashboards are under `flux/infrastructure/configs/` or beside the app that
-owns them.
+owns them. Container logs go to VictoriaLogs, read in the same Grafana (see
+[Logs](#logs)).
 
 ```mermaid
 graph LR
@@ -16,6 +17,8 @@ graph LR
     PROM["Prometheus<br/>30d / 18GB"]
     AM["Alertmanager"]
     GR["Grafana<br/>stateless"]
+    VL["VictoriaLogs<br/>30d / 16GiB"]
+    VA["vlagent<br/>DaemonSet"]
   end
   K["k8s: node-exporter,<br/>kube-state-metrics, kubelet,<br/>apiserver, CoreDNS"]
   NAS["NAS node-exporter<br/>10.212.4.150:9100"]
@@ -26,7 +29,8 @@ graph LR
   VS["VolSync controller"]
   PROM -->|scrape| K & NAS & GA & PX & DHS & ST & VS
   PROM --> AM
-  GR --> PROM
+  GR --> PROM & VL
+  VA -->|"every container's log"| VL
   AM -->|"critical: sound, 4h<br/>warning: silent, 12h"| TG["Telegram group"]
   AM -->|"Watchdog, every 5m"| HB["Cronitor"]
   HB -.->|"pings stop"| ME["email, from Cronitor"]
@@ -36,9 +40,14 @@ graph LR
 
 | What | URL | Login |
 |--|--|--|
-| Grafana | `https://grafana.<app_domain>` | anonymous = Viewer; *Sign in with Pocket ID*: `admins` -> Admin, else Viewer. Break-glass: the admin form, credentials in `kv/monitoring/grafana` (see [break-glass](access.md#break-glass)) |
+| Grafana | `https://grafana.<app_domain>` | *Sign in with Pocket ID*: `admins` -> Admin, anyone else refused; no anonymous access. Break-glass: the admin form, credentials in `kv/monitoring/grafana` (see [break-glass](access.md#break-glass)) |
 | Alertmanager | `https://alertmanager.<app_domain>` | **none**: every LAN and tailnet device can silence an alert -- the price of silencing from a phone |
 | Prometheus | no route | `kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090` |
+| VictoriaLogs | no route | `kubectl -n monitoring port-forward svc/victoria-logs-server 9428`, UI at `/select/vmui` |
+
+Grafana is login-only because of the logs: in OSS Grafana every Viewer can
+query every datasource, and logs carry emails, IPs and whatever an app prints
+at startup. VictoriaLogs has no auth of its own, hence no route.
 
 Grafana sessions die with the pod (its sqlite is on an emptyDir).
 
@@ -99,6 +108,9 @@ Lab rules, all labelled `origin: lab`:
 | `SyncthingFolderError` | warning | a folder in error 1h | same |
 | `SyncthingFolderOutOfSync` | warning | the hub behind on a folder 6h | same |
 | `SyncthingDeviceUnseen` | warning | a device not connected for 7 days | same |
+| `VictoriaLogsDown` | warning | VictoriaLogs not scraped 10m | `infrastructure/configs/victoria-logs/` |
+| `VictoriaLogsRetentionShort` | warning | its PVC > 90% of the 16GiB cap for 1h: logs dropped before 30d | same |
+| `VlagentDropping` | warning | a collector dropped log blocks in the last hour | same |
 
 Plus the ~134 rules the chart ships (pods crash-looping, PVC filling up,
 node pressure, `Watchdog`, ...). Find ours among them with `origin="lab"` in
@@ -160,7 +172,36 @@ The chart's own are off. Ours live flat in
 | Garage | upstream's: API requests + errors, disk I/O, resync and table queues |
 | Proxmox | quorum, storage fill, CPU, memory (usage + assigned), root fs, network per host; a guests table |
 
-Anything else: Prometheus via *Explore*.
+Anything else: Prometheus via *Explore*. Logs: *Explore* -> VictoriaLogs; no
+logs dashboard yet.
+
+## Logs {#logs}
+
+Every container in every namespace, nothing else: no Talos node logs
+(`talosctl logs` / `talosctl dmesg`), no other VMs, and not the DHS box
+(a pull design is a todo in `todo.txt`).
+
+| Piece | What | Defined in |
+|--|--|--|
+| vlagent | DaemonSet, tails `/var/log/containers`, ships to VictoriaLogs | `controllers/victoria-logs/collector.yaml` |
+| VictoriaLogs | single binary, StatefulSet `victoria-logs-server`, `:9428` | `controllers/victoria-logs/server.yaml` |
+| datasource | Grafana plugin `victoriametrics-logs-datasource`, uid `victoria-logs` | `controllers/kube-prometheus-stack/release.yaml` |
+
+- **Retention:** 30d or 16GiB, whichever first, on a 20Gi `fast` PVC. Near
+  the cap the oldest logs go first and `VictoriaLogsRetentionShort` fires:
+  grow the PVC (online, never shrinks) and `retentionDiskSpaceUsage` together.
+- **Streams** are `namespace`, `pod`, `container`
+  (`kubernetes.pod_namespace`, `kubernetes.pod_name`,
+  `kubernetes.container_name`); pod labels ride along. JSON lines are split
+  into fields.
+- **VictoriaLogs down:** each node buffers up to 1GiB in
+  `/var/lib/vl-collector` (with its read checkpoints) and sends it later.
+
+Query, in *Explore*:
+
+```
+{kubernetes.pod_namespace="vaultwarden"} error
+```
 
 ## TrueNAS node-exporter {#truenas}
 
@@ -187,6 +228,7 @@ not applied automatically: edit the app in TrueNAS and set the tag (see
 |--|--|--|
 | Prometheus TSDB | `fast` PVC 20Gi; dropped after 30d or 18GB, size cap first | history only |
 | Alertmanager silences, notification log | `fast` PVC 1Gi | barely |
+| VictoriaLogs | `fast` PVC 20Gi (`server-volume-victoria-logs-server-0`); dropped after 30d or 16GiB | history only |
 | Grafana | emptyDir | no -- dashboards from ConfigMaps, users from Pocket ID |
 
 ## Backup & restore
@@ -197,7 +239,8 @@ lost PVC is lost history and silences. Delete the PVC, let Flux recreate it.
 
 **Verify** after a rebuild: Prometheus *Status* -> *Targets* all up;
 Alertmanager shows only `Watchdog` firing; Cronitor shows pings arriving; the
-Lab dashboard is all green. Test the Telegram path with a throwaway alert:
+Lab dashboard is all green; *Explore* -> VictoriaLogs shows lines from the
+last minute. Test the Telegram path with a throwaway alert:
 
 ```sh
 kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -- \
@@ -222,8 +265,9 @@ kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -- 
 ## What breaks without it
 
 Prometheus or Alertmanager down: no alerts at all, but Cronitor notices
-within minutes. Grafana down: no dashboards, alerts unaffected. Nothing else
-depends on the stack.
+within minutes. Grafana down: no dashboards, alerts unaffected. VictoriaLogs
+down: no logs in Grafana, collected later from the nodes' buffers. Nothing
+else depends on the stack.
 
 ## Gotchas
 
@@ -234,5 +278,9 @@ depends on the stack.
   then lost to a log line. The template uses HTML for that reason.
 - **No CPU limits** anywhere in the stack: they cause the throttling it
   watches for. Memory limits are leak ceilings.
+- **The logs datasource plugin is downloaded from grafana.com on every
+  Grafana start** (the pod is stateless). grafana.com unreachable: Grafana
+  starts without it, metrics unaffected. Renovate bumps its pin through the
+  `# renovate:` comment.
 - **Grafana at 400Mi** was ~200KiB under its peak and got killed on liveness;
   it has 1Gi now.

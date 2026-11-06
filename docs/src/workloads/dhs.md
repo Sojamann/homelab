@@ -147,6 +147,12 @@ See [Monitoring](../monitoring.md).
 - `DhsDumpStale` -- no successful dump in 26h. Warning. Without it VolSync
   would keep backing up a stale file without complaint.
 
+**Logs** are not collected: they stay on the box (`docker compose logs`).
+A pull design -- docker's `journald` log driver, `systemd-journal-gatewayd`
+served over the tailnet, a lab pod streaming it into VictoriaLogs'
+`/insert/journald` -- is a todo in `todo.txt`; a push from the box was ruled
+out, it would break the pull-only rule above.
+
 ## Gotchas
 
 - **`dump.yaml`'s image tracks the server's major (17).** An older `pg_dump`

@@ -36,7 +36,7 @@ Details, users, groups and recovery: [Pocket ID](platform/pocket-id.md).
 
 | Uses Pocket ID | How the group maps |
 |--|--|
-| Grafana | `admins` -> Admin, anyone else -> Viewer; anonymous is Viewer anyway |
+| Grafana | `admins` -> Admin, anyone else refused; no anonymous access (logs) |
 | OpenBao | `admins` only, policy `admin`, 8h token |
 | Proxmox | `admins` -> group `admins-pocket-id`, Administrator; rights re-read every login |
 | PBS | no group mapping: each admin is created by hand as `<name>@pocket-id` |

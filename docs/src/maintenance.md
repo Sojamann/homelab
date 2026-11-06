@@ -37,6 +37,10 @@ the line above:
 cilium_version = "1.20.3"
 ```
 
+The same comment pins Grafana plugins in `flux/` chart values, above a
+`- <plugin-id>@<version>` line (`flux/renovate.json`; a leading `v` in the tag
+is stripped there).
+
 Datasources in use: `helm`, `docker` (OCI charts), `github-releases`. Add
 `extractVersion=^v(?<version>.+)$` when upstream tags carry a `v` the pin does
 not.

@@ -4,7 +4,7 @@ Three places data sits, chosen by redundancy against speed:
 
 | Tier | Where | Media | Redundancy | For |
 |--|--|--|--|--|
-| `fast` | NAS pool `fast` | 2x 1TB NVMe, one mirror, ~950GB usable, encrypted | 1 disk | latency-bound PVCs: databases, indexes, OpenBao, Prometheus |
+| `fast` | NAS pool `fast` | 2x 1TB NVMe, one mirror, ~950GB usable, encrypted | 1 disk | latency-bound PVCs: databases, indexes, OpenBao, Prometheus, VictoriaLogs |
 | `slow` | NAS pool `slow` | 2x 4TB HDD, one mirror, ~4TB usable, encrypted | 1 disk | `bulk` PVCs, people's files, every backup |
 | `local` | each Proxmox node's own disk | node disk | none | VM disks (qcow2), ISOs, images |
 
@@ -46,6 +46,7 @@ graph TD
 | `postgres-dump` (DHS) | `fast` | 5Gi | VolSync |
 | `data-openbao-0` | `fast` | 1Gi | rebuilt by tofu |
 | Prometheus | `fast` | 20Gi (capped at 18GB, 30d) | not kept |
+| VictoriaLogs | `fast` | 20Gi (capped at 16GiB, 30d) | not kept |
 | Alertmanager | `fast` | 1Gi | not kept |
 | `syncthing-data` -> `slow/k8s-csi/syncthing` | `bulk`, static PV | 1Ti (label only) | ZFS snapshots |
 | `memos-assets` -> `slow/k8s-csi/memos` | `bulk`, static PV | 5Gi (label only) | ZFS snapshots |
