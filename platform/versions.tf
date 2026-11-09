@@ -59,7 +59,7 @@ terraform {
     # component here does not have to think about it.
     kubectl = {
       source  = "alekc/kubectl"
-      version = "~> 2.4"
+      version = "~> 3.0"
     }
 
     # OpenBao's seal key, and later the passwords this layer hands out. Both
