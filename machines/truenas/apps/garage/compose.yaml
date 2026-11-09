@@ -17,7 +17,7 @@ services:
       - /mnt/slow/garage/data:/var/lib/garage/data
 
   caddy:
-    image: caddy:2.11.7-alpine
+    image: caddy:2.11.9-alpine
     network_mode: host
     restart: unless-stopped
     configs:
