@@ -26,8 +26,8 @@ files are its own. Using it is upstream:
 
 ## Where it runs
 
-Namespace `nextcloud`: Deployment `nextcloud`, CronJobs `nextcloud-cron`
-(background jobs, every 5 minutes) and `db-dump`, CNPG `Cluster`
+Namespace `nextcloud`: Deployment `nextcloud` (with a `cron` sidecar running
+background jobs every 5 minutes), CronJob `db-dump`, CNPG `Cluster`
 `nextcloud-db`. Flux Kustomization `nextcloud`.
 Wiring: [Build guide: Nextcloud](../build/flux/docs/nextcloud.md).
 
@@ -65,7 +65,7 @@ and the start hook (git).
 ```sh
 flux suspend kustomization nextcloud
 kubectl -n nextcloud scale deploy/nextcloud --replicas 0
-kubectl -n nextcloud patch cronjob nextcloud-cron db-dump -p '{"spec":{"suspend":true}}'
+kubectl -n nextcloud patch cronjob db-dump -p '{"spec":{"suspend":true}}'
 ```
 
 1. **`nextcloud-html`:** the generic [VolSync restore](../backups.md#volsync),
@@ -89,7 +89,7 @@ kubectl -n nextcloud patch cronjob nextcloud-cron db-dump -p '{"spec":{"suspend"
 4. **Up, then reconcile the db with the files:**
    ```sh
    flux resume kustomization nextcloud   # scales up; `suspend` is not Flux's field
-   kubectl -n nextcloud patch cronjob nextcloud-cron db-dump -p '{"spec":{"suspend":false}}'
+   kubectl -n nextcloud patch cronjob db-dump -p '{"spec":{"suspend":false}}'
    occ() { kubectl -n nextcloud exec deploy/nextcloud -- php occ "$@"; }
    occ maintenance:mode --on
    occ files:scan --all
@@ -127,7 +127,7 @@ else -- sharing settings, users -- is the UI's, in the db.
 **Making someone admin.** Pocket ID groups are not mapped. Log in as `admin`
 (break-glass), *Users*, add the person to group `admin`.
 
-**Updates.** Image tag pinned in `server.yaml` and `cron.yaml`; Renovate
+**Updates.** Image tag pinned in `server.yaml` (server and sidecar); Renovate
 proposes bumps (see [Maintenance](../maintenance.md)). The image runs
 `occ upgrade` on start, before the pod turns Ready.
 
