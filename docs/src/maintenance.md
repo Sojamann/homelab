@@ -38,10 +38,13 @@ cilium_version = "1.20.3"
 ```
 
 The same comment pins Grafana plugins in `flux/` chart values, above a
-`- <plugin-id>@<version>` line (`flux/renovate.json`; a leading `v` in the tag
-is stripped there).
+`- <plugin-id>@<version>` line, with `datasource=custom.grafana-plugins
+depName=<plugin-id>` (`flux/renovate.json`). It reads the grafana.com catalog,
+which Grafana installs from; GitHub releases reach it days later, and a pin
+ahead of the catalog stops Grafana from starting.
 
-Datasources in use: `helm`, `docker` (OCI charts), `github-releases`. Add
+Datasources in use: `helm`, `docker` (OCI charts), `github-releases`,
+`custom.grafana-plugins`. Add
 `extractVersion=^v(?<version>.+)$` when upstream tags carry a `v` the pin does
 not.
 
