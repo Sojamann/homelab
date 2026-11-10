@@ -33,6 +33,7 @@
 - [Access & secrets](access.md)
 - [Maintenance](maintenance.md)
 - [Conventions](conventions.md)
+- [Hardware](hardware.md)
 
 # Build guide
 
