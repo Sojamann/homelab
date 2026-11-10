@@ -114,7 +114,7 @@ Then log in through Pocket ID: your files are there and an older one opens.
 
 - `server.yaml` env: trusted domain, proxy, db connection, the admin's
   install-time password
-- `config/lab.config.php`: db from env, no skeleton files, phone region DE,
+- `config/lab.config.php`, copied into `config/` on every start: db from env, no skeleton files, phone region DE,
   maintenance window from 01:00 UTC, log to stderr, local remote servers
   allowed (Pocket ID resolves to the gateway's private address)
 - `config/lab-hook.sh`, on every start: background jobs on cron, default apps
