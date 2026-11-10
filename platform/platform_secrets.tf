@@ -211,6 +211,30 @@ resource "vault_kv_secret_v2" "mealie" {
 }
 
 ####################################
+#            NEXTCLOUD             #
+####################################
+
+# The admin is break-glass only (`/login?direct=1`) -- everyone else signs in
+# through Pocket ID. Used at install; afterwards it lives in Nextcloud's db.
+resource "random_password" "nextcloud_admin" {
+  length  = 32
+  special = false
+}
+
+resource "vault_kv_secret_v2" "nextcloud" {
+  mount = vault_mount.kv.path
+  name  = "nextcloud/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    admin-password     = random_password.nextcloud_admin.result
+    oidc-client-id     = var.nextcloud_oidc_client_id
+    oidc-client-secret = var.nextcloud_oidc_client_secret
+  })
+}
+
+####################################
 #             VOLSYNC              #
 ####################################
 

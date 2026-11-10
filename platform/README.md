@@ -72,6 +72,8 @@ Vaultwarden, Grafana, Memos and Mealie values it only carries: they are written 
 | `TF_VAR_memos_oidc_client_secret`     | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_mealie_oidc_client_id`        | `secrets/vault.yml` | Mealie's Pocket ID client              |
 | `TF_VAR_mealie_oidc_client_secret`    | `secrets/vault.yml` | its secret                            |
+| `TF_VAR_nextcloud_oidc_client_id`     | `secrets/vault.yml` | Nextcloud's Pocket ID client          |
+| `TF_VAR_nextcloud_oidc_client_secret` | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_bao_oidc_client_id`           | `secrets/vault.yml` | OpenBao's Pocket ID client            |
 | `TF_VAR_bao_oidc_client_secret`       | `secrets/vault.yml` | its secret                            |
 | `TF_VAR_tailscale_operator_client_id` | `secrets/vault.yml` | the tailscale operator's OAuth client |

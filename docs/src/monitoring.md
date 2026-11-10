@@ -104,6 +104,7 @@ Lab rules, all labelled `origin: lab`:
 | `VolSyncMetricsAbsent` | warning | no sync status at all 1h (controller or scrape dead) | same |
 | `DhsDown` | critical | DHS box unreachable over the tailnet 5m | `apps/dhs/rules.yaml` |
 | `DhsDumpStale` | warning | no successful dump in 26h | same |
+| `NextcloudDumpStale` | warning | no successful Nextcloud db dump in 26h | `apps/nextcloud/rules.yaml` |
 | `SyncthingDown` | critical | hub not scraped 10m | `apps/syncthing/monitoring.yaml` |
 | `SyncthingFolderError` | warning | a folder in error 1h | same |
 | `SyncthingFolderOutOfSync` | warning | the hub behind on a folder 6h | same |

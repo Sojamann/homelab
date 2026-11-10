@@ -26,6 +26,8 @@ outstanding.
   Monday mornings.
 - **Talos and Kubernetes** get one PR per minor, since they upgrade one minor
   at a time (see below).
+- **Nextcloud** gets one PR per major: it cannot skip one. Merge them in
+  order, one at a time -- see [Nextcloud](workloads/nextcloud.md#admin).
 - **Images in our own Zot registry** are skipped; `mise run image` pushes and
   bumps those (see [Zot](platform/zot.md)).
 
@@ -44,7 +46,8 @@ which Grafana installs from; GitHub releases reach it days later, and a pin
 ahead of the catalog stops Grafana from starting.
 
 Datasources in use: `helm`, `docker` (OCI charts), `github-releases`,
-`custom.grafana-plugins`. Add
+`custom.grafana-plugins`. A CNPG `Cluster`'s `imageName:` is picked up by a
+regex manager in `flux/renovate.json`. Add
 `extractVersion=^v(?<version>.+)$` when upstream tags carry a `v` the pin does
 not.
 
@@ -248,6 +251,9 @@ talosctl -n "$NODE" health
   [Talos / Kubernetes](platform/talos.md).
 - **DHS's `pg_dump` image** tracks the DHS server's postgres major. Bump both
   together -- see [DHS](workloads/dhs.md).
+- **Nextcloud's `pg_dump` image** is the CNPG image of its `Cluster`; Renovate
+  bumps both in one PR. A Postgres major is an in-place CNPG upgrade -- see
+  [Nextcloud](workloads/nextcloud.md#admin).
 - **App images with migrations** (Vaultwarden, Pocket ID, ...) are not undone
   by reverting the tag; the way back is a restore. Check the app's page before
   merging a major.

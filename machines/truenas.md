@@ -182,6 +182,13 @@ Memos' attachments are the same kind of static PV (see
 mkdir /mnt/slow/k8s-csi/memos && chown 1000:1000 /mnt/slow/k8s-csi/memos
 ```
 
+Nextcloud's files too (see [Nextcloud](../docs/src/workloads/nextcloud.md)),
+owned by `www-data` (33) and not world-readable, or Nextcloud refuses it:
+
+```sh
+mkdir -m 0770 /mnt/slow/k8s-csi/nextcloud && chown 33:33 /mnt/slow/k8s-csi/nextcloud
+```
+
 Personal files live there, not in `users/<name>/files` -- that share stays as
 the way to drop something on the NAS by hand. Do not keep the same files in
 both.

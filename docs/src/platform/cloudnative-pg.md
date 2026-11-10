@@ -6,9 +6,9 @@ The Postgres operator. It installs the `Cluster` CRD and its kin, watches
 every namespace, and runs databases declared beside the app that owns them.
 It runs no database itself.
 
-**No `Cluster` exists today.** Nothing under `flux/apps/` declares one; DHS's
-postgres runs on its own box outside the cluster (see
-[DHS](../workloads/dhs.md)). The operator is installed ahead of a first user.
+**One `Cluster`:** `nextcloud-db` in `nextcloud`, 1 instance -- see
+[Nextcloud](../workloads/nextcloud.md). DHS's postgres runs on its own box
+outside the cluster (see [DHS](../workloads/dhs.md)).
 
 ## Access
 
@@ -30,7 +30,7 @@ Flux Kustomization `infrastructure`. No wiring doc in the Build guide; see
 
 ## Data
 
-None of its own. A future `Cluster`'s PVCs and backups belong to that app.
+None of its own. A `Cluster`'s PVCs and backups belong to its app.
 
 ## Backup & restore
 
@@ -59,6 +59,5 @@ healthy, so the CRDs exist by then.
 
 ## What breaks without it
 
-Today: nothing. With databases: no failover, no reconciliation or
-maintenance of them; whether the instances keep serving depends on CNPG's
-behaviour and is not tested here.
+No failover, no reconciliation or maintenance of `nextcloud-db`; whether the
+instance keeps serving depends on CNPG's behaviour and is not tested here.
