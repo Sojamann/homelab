@@ -127,6 +127,13 @@ pod annotation so a values-only change actually rolls the pods.
 - **Gateway API CRDs are pinned to what Cilium needs** (`cluster_gateway_api.tf`).
   Bump them together. Upstream's `safe-upgrades` policy refuses downgrades
   below v1.5.
+- **Image GC runs at 70% → 60% of `EPHEMERAL`** (kubelet `extraConfig` in
+  `cluster_talos.tf`). The default 85% equals the imagefs eviction line (15%
+  free), so a burst of pulls (a Renovate batch) tainted the node with
+  `DiskPressure` before the 5-min GC loop ran. Debug a recurrence:
+  `talosctl logs kubelet | grep -E 'eviction_manager|image_gc'` and node
+  events. In Prometheus `/var` matches the NAS and PVE too; filter by
+  `device="/dev/sda5"`.
 - **Talos has no SSH.** Logs and files go through `talosctl logs`,
   `talosctl read`, `talosctl dashboard`.
 

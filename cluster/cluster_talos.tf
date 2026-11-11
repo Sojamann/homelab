@@ -52,6 +52,15 @@ locals {
         disk  = "/dev/sda"
       }
 
+      # Defaults (GC at 85%) equal the imagefs eviction line (15% free), so a
+      # burst of pulls hits DiskPressure before the 5-min GC loop runs.
+      kubelet = {
+        extraConfig = {
+          imageGCHighThresholdPercent = 70
+          imageGCLowThresholdPercent  = 60
+        }
+      }
+
       # The node resolves at its own gateway. Not 10.212.2.1: that is in
       # Trusted, and the k8s deny policy would eat every query, which looks
       # like a broken node rather than a firewalled one.
