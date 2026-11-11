@@ -7,7 +7,6 @@ gateway: LAN and tailnet only, never public (see
 | Workload | What it's for | Reachability | Where it runs |
 |--|--|--|--|
 | [Vaultwarden](vaultwarden.md) | password manager | LAN + tailnet, `passwords.<app_domain>` | ns `vaultwarden` |
-| [Syncthing](syncthing.md) | always-on sync hub, a copy of every file on the NAS | LAN + tailnet, `sync.<app_domain>` (GUI), `:22000` (sync) | ns `syncthing` |
 | [Memos](memos.md) | notes, on trial | LAN + tailnet, `notes.<app_domain>` | ns `memos` |
 | [Nextcloud](nextcloud.md) | files: web UI, share links, desktop/mobile sync | LAN + tailnet, `files.<app_domain>` | ns `nextcloud` |
 | [Mealie](mealie.md) | recipes, meal plan, shopping list | LAN + tailnet, `recipes.<app_domain>` | ns `mealie` |

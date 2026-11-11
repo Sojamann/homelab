@@ -39,7 +39,6 @@ graph TD
 | What | Tier | Size | Backed up by |
 |--|--|--|--|
 | `vaultwarden-data` | `fast` | 1Gi | VolSync |
-| `syncthing-config` | `fast` | 2Gi | VolSync |
 | `pocket-id-state` | `fast` | 1Gi | VolSync |
 | `memos-data` | `fast` | 1Gi | VolSync |
 | `mealie-data` | `fast` | 5Gi | VolSync |
@@ -50,7 +49,6 @@ graph TD
 | Prometheus | `fast` | 20Gi (capped at 18GB, 30d) | not kept |
 | VictoriaLogs | `fast` | 20Gi (capped at 16GiB, 30d) | not kept |
 | Alertmanager | `fast` | 1Gi | not kept |
-| `syncthing-data` -> `slow/k8s-csi/syncthing` | `bulk`, static PV | 1Ti (label only) | ZFS snapshots |
 | `memos-assets` -> `slow/k8s-csi/memos` | `bulk`, static PV | 5Gi (label only) | ZFS snapshots |
 | `nextcloud-data` -> `slow/k8s-csi/nextcloud` | `bulk`, static PV | 500Gi (label only) | ZFS snapshots |
 | `kassenbuch-data` | `bulk` | 10Gi | ZFS snapshots |
@@ -151,10 +149,10 @@ one directory per PV and has no API to the NAS, which is why the dataset
 - **`no_root_squash`.** The driver and the kubelet (`fsGroup`) both `chown` as
   root on the mount; squashed, the volume mounts and the pod cannot write. So
   anything that can reach `10.212.4.150` on k8s is root on the share.
-- **Syncthing's files and Memos' attachments are static `Retain` PVs** onto
-  `slow/k8s-csi/syncthing` and `slow/k8s-csi/memos`, made by hand, so no PVC
-  delete can take them. See [Syncthing](workloads/syncthing.md),
-  [Memos](workloads/memos.md).
+- **Memos' attachments and Nextcloud's files are static `Retain` PVs** onto
+  `slow/k8s-csi/memos` and `slow/k8s-csi/nextcloud`, made by hand, so no PVC
+  delete can take them. See [Memos](workloads/memos.md),
+  [Nextcloud](workloads/nextcloud.md).
 
 ## Admin
 

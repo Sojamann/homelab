@@ -14,9 +14,9 @@ locals {
   # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
   gateway_api_version = "v1.7.0"
 
-  # What Cilium 1.20 requires, plus TCPRoute and UDPRoute (syncthing). The rest
-  # of the standard channel (ListenerSet) is optional -- Cilium disables those
-  # features without their CRDs.
+  # What Cilium 1.20 requires, plus TCPRoute and UDPRoute for non-HTTP
+  # listeners (none today). The rest of the standard channel (ListenerSet) is
+  # optional -- Cilium disables those features without their CRDs.
   gateway_api_crds = [
     "gatewayclasses",
     "gateways",

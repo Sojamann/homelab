@@ -44,8 +44,6 @@ route cannot apply. *Other* lists the incidental copies under
 | What | [ZFS](#zfs-snapshots) | [PBS](#pbs) | [HA own](#ha-backups) | [VolSync](#volsync) | [Secrets repo](#secrets-repo) | [etcd](#etcd-snapshots) | [Off-site](#off-site) | Other |
 |--|--|--|--|--|--|--|--|--|
 | **Vaultwarden** (`vaultwarden-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | admin token hash | n/a | ✗ | clients' offline cache, items only |
-| **Syncthing** files (`slow/k8s-csi/syncthing`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | trash can 7d; every paired device |
-| **Syncthing** config + keys (`syncthing-config`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
 | **Memos** attachments (`slow/k8s-csi/memos`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
 | **Memos** db (`memos-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
 | **Nextcloud** files (`slow/k8s-csi/nextcloud`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | trash bin + versions in Nextcloud; synced clients |
@@ -81,7 +79,6 @@ route cannot apply. *Other* lists the incidental copies under
 | This broke | Go to |
 |--|--|
 | A file deleted or overwritten on a NAS share | [ZFS snapshots](#zfs-snapshots) |
-| A file deleted in Syncthing | [Syncthing](workloads/syncthing.md) first (trash can, 7d), then [ZFS snapshots](#zfs-snapshots) |
 | A PVC deleted | `fast`: [VolSync](#volsync), if it has a `backup.yaml`, else rebuild. `bulk`: [ZFS snapshots](#zfs-snapshots) -- the driver deletes the directory, the snapshots still hold it for 30 days |
 | A dead or broken VM | [PBS](#pbs). Home Assistant also: [its own backups](#ha-backups) |
 | Dead Proxmox node (titan, the only one) | [PBS](#pbs), *Dead node*: PBS first, then the VMs from it, then tofu |
@@ -137,8 +134,8 @@ ls /mnt/slow/users/<name>/files/.zfs/snapshot/
 cp -a /mnt/slow/users/<name>/files/.zfs/snapshot/<snap>/<path> /mnt/slow/users/<name>/files/<path>
 ```
 
-A `bulk` PVC is a directory under `slow/k8s-csi` (`pvc-<uuid>`, or
-`syncthing/`). Scale the app to 0 first, copy back, scale up. A recreated PVC
+A `bulk` PVC is a directory under `slow/k8s-csi` (`pvc-<uuid>`, or a
+static one like `nextcloud/`). Scale the app to 0 first, copy back, scale up. A recreated PVC
 gets a new directory -- copy into that one.
 
 Rolling a whole dataset back (`zfs rollback -r`) destroys every newer
@@ -259,7 +256,6 @@ zvol -- `kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: 
 | PVC | Namespace | Schedule (UTC) | Defined in (apps repo) | Mover uid |
 |--|--|--|--|--|
 | `vaultwarden-data` | `vaultwarden` | `00:15` | `apps/vaultwarden/backup.yaml` | 1000 |
-| `syncthing-config` | `syncthing` | `00:30` | `apps/syncthing/backup.yaml` | 1000 |
 | `pocket-id-state` | `pocket-id` | `00:45` | `infrastructure/configs/pocket-id/backup.yaml` | 1000 |
 | `postgres-dump` | `dhs` | `01:00` | `apps/dhs/backup.yaml` | 70 |
 | `memos-data` | `memos` | `01:15` | `apps/memos/backup.yaml` | 1000 |
@@ -314,7 +310,7 @@ mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups
 starts a run; **while it is set the schedule is ignored**, so remove it after.
 
 ```sh
-SRCS="vaultwarden/vaultwarden-data syncthing/syncthing-config pocket-id/pocket-id-state memos/memos-data mealie/mealie-data dhs/postgres-dump nextcloud/db-dump nextcloud/nextcloud-html"
+SRCS="vaultwarden/vaultwarden-data pocket-id/pocket-id-state memos/memos-data mealie/mealie-data dhs/postgres-dump nextcloud/db-dump nextcloud/nextcloud-html"
 for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type merge \
   -p '{"spec":{"trigger":{"manual":"run-'"$(date +%F)"'"}}}'; done
 kubectl get replicationsource -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,LAST_MANUAL:.status.lastManualSync,RESULT:.status.latestMoverStatus.result
@@ -518,8 +514,6 @@ Until it exists, losing the NAS loses every backup on this page.
 
 Not routes you plan around, but they exist:
 
-- **Syncthing** -- each folder keeps a 7-day trash can (`.stversions/`), and
-  every paired device holds the files. See [Syncthing](workloads/syncthing.md).
 - **Vaultwarden clients** -- every logged-in client caches the vault items
   (not attachments or Sends). See [Vaultwarden](workloads/vaultwarden.md).
 - **Garage metadata** -- Garage snapshots its LMDB every 6h inside

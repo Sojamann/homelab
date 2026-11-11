@@ -25,9 +25,8 @@ graph LR
   GA["Garage /metrics<br/>s3-k8s:3903, bearer"]
   PX["titan :9100 node-exporter<br/>:9221 pve-exporter"]
   DHS["DHS box :9100<br/>via tailscale egress"]
-  ST["Syncthing hub"]
   VS["VolSync controller"]
-  PROM -->|scrape| K & NAS & GA & PX & DHS & ST & VS
+  PROM -->|scrape| K & NAS & GA & PX & DHS & VS
   PROM --> AM
   GR --> PROM & VL
   VA -->|"every container's log"| VL
@@ -67,7 +66,6 @@ Kustomization `infrastructure`; rules and scrapes in
 | Garage | its admin `/metrics`, bearer `garage_metrics_token` | `garage` |
 | titan | node-exporter + pve-exporter (installed by machine-config), through `metrics-allow-proxmox` | `proxmox`, `pve` |
 | DHS box | node-exporter over the tailnet | `dhs` |
-| Syncthing hub | its metrics endpoint | `syncthing` |
 | VolSync | controller metrics | -- |
 
 etcd, scheduler, controller-manager and kube-proxy are off: Talos binds them to
@@ -105,10 +103,6 @@ Lab rules, all labelled `origin: lab`:
 | `DhsDown` | critical | DHS box unreachable over the tailnet 5m | `apps/dhs/rules.yaml` |
 | `DhsDumpStale` | warning | no successful dump in 26h | same |
 | `NextcloudDumpStale` | warning | no successful Nextcloud db dump in 26h | `apps/nextcloud/rules.yaml` |
-| `SyncthingDown` | critical | hub not scraped 10m | `apps/syncthing/monitoring.yaml` |
-| `SyncthingFolderError` | warning | a folder in error 1h | same |
-| `SyncthingFolderOutOfSync` | warning | the hub behind on a folder 6h | same |
-| `SyncthingDeviceUnseen` | warning | a device not connected for 7 days | same |
 | `VictoriaLogsDown` | warning | VictoriaLogs not scraped 10m | `infrastructure/configs/victoria-logs/` |
 | `VictoriaLogsRetentionShort` | warning | its PVC > 90% of the 16GiB cap for 1h: logs dropped before 30d | same |
 | `VlagentDropping` | warning | a collector dropped log blocks in the last hour | same |

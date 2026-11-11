@@ -112,8 +112,8 @@ Rules:
 ```
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
-│   ├── syncthing/   a static PV, made by hand -- see below
-│   └── memos/       likewise
+│   ├── memos/       a static PV, made by hand -- see below
+│   └── nextcloud/   likewise
 ├── garage/          S3, see S3 (Garage)
 │   ├── meta         metadata DB
 │   └── data         object blocks
@@ -167,15 +167,8 @@ Setting them up:
 preset -- nothing reaches it over SMB. Nothing below the root is set by hand:
 the driver creates each PV directory and `chown`s it itself.
 
-The exception is `syncthing/`, the household's synced files, bound as a static
-`Retain` PV so no PVC delete can take it (see
-[Syncthing](../docs/src/workloads/syncthing.md)). The driver does not create what it did not provision:
-
-```sh
-mkdir /mnt/slow/k8s-csi/syncthing && chown 1000:1000 /mnt/slow/k8s-csi/syncthing
-```
-
-Memos' attachments are the same kind of static PV (see
+The exceptions are static `Retain` PVs, so no PVC delete can take them. The
+driver does not create what it did not provision. Memos' attachments (see
 [Memos](../docs/src/workloads/memos.md)):
 
 ```sh

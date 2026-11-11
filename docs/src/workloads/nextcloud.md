@@ -3,9 +3,8 @@
 ## What it's for
 
 The household's files in a browser and on phones: upload, share links,
-desktop and mobile sync. Files only -- no calendar, contacts or photos. It
-replaces nothing: SMB shares and Syncthing stay as they are, and Nextcloud's
-files are its own. Using it is upstream:
+desktop and mobile sync. Files only -- no calendar, contacts or photos. SMB
+shares stay as they are, and Nextcloud's files are its own. Using it is upstream:
 [Nextcloud user manual](https://docs.nextcloud.com/server/latest/user_manual/en/).
 
 ## Access

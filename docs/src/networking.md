@@ -118,13 +118,11 @@ Gateway API `Gateway` (`lab`, namespace `gateway`) on `10.212.4.200`:
   HTTPS
 - an app adds a hostname with one `HTTPRoute` in `flux/apps/<app>/` -- no DNS
   record, no certificate, no listener
-- non-HTTP gets its own port instead: `:22000` TCP and UDP for Syncthing
-  (`TCPRoute`/`UDPRoute`); any `<app_domain>` name reaches it
+- non-HTTP would get its own port instead (`TCPRoute`/`UDPRoute`); none today
 
 | Hostname | Service |
 |--|--|
 | `passwords` | [Vaultwarden](workloads/vaultwarden.md) |
-| `sync` | [Syncthing](workloads/syncthing.md) |
 | `kassenbuch` | [Kassenbuch](workloads/kassenbuch.md) |
 | `supplements` | [Supplement tracker](workloads/supplement-tracker.md) |
 | `dash` | [Glance](workloads/glance.md) |

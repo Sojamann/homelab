@@ -89,10 +89,9 @@ generic [VolSync restore](backups.md#volsync), values from its page:
 |--|--|--|--|
 | 1 | `pocket-id-state` | [Pocket ID](platform/pocket-id.md) | first: SSO for Grafana, OpenBao, Proxmox, PBS, Memos, Mealie, Nextcloud. Its Kustomization is `infrastructure` -- suspending it pauses every controller |
 | 2 | `vaultwarden-data` | [Vaultwarden](workloads/vaultwarden.md) | |
-| 3 | `syncthing-config` | [Syncthing](workloads/syncthing.md) | device keys: without them every device re-pairs |
-| 4 | `memos-data` | [Memos](workloads/memos.md) | the notes |
-| 5 | `mealie-data` | [Mealie](workloads/mealie.md) | the recipes |
-| 6 | `nextcloud-html`, then the db from `db-dump` | [Nextcloud](workloads/nextcloud.md#backup--restore) | config.php's secret; then the files rescan |
+| 3 | `memos-data` | [Memos](workloads/memos.md) | the notes |
+| 4 | `mealie-data` | [Mealie](workloads/mealie.md) | the recipes |
+| 5 | `nextcloud-html`, then the db from `db-dump` | [Nextcloud](workloads/nextcloud.md#backup--restore) | config.php's secret; then the files rescan |
 | -- | `postgres-dump` | [DHS](workloads/dhs.md) | nothing to restore: it is a staging copy, the history stays in restic |
 
 **Restore as of before the rebuild.** Flux creates each ReplicationSource
@@ -109,9 +108,8 @@ still there: scale the app to 0, copy the old directory's contents into the
 new one on the NAS, scale up -- as in
 [ZFS snapshots, *Restore*](backups.md#zfs-snapshots) with the live directory
 as source. Zot can instead be refilled by pushing the images again.
-Syncthing's files, Memos' attachments and Nextcloud's files are static PVs
-onto `slow/k8s-csi/syncthing`, `slow/k8s-csi/memos` and
-`slow/k8s-csi/nextcloud` and need nothing.
+Memos' attachments and Nextcloud's files are static PVs onto
+`slow/k8s-csi/memos` and `slow/k8s-csi/nextcloud` and need nothing.
 
 **Not restored, rebuilt:** Prometheus, Alertmanager and VictoriaLogs history (gone),
 Grafana (stateless), Glance (stateless), OpenBao (from tofu), the CloudNativePG

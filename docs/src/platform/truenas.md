@@ -47,7 +47,7 @@ compose files: `machines/truenas/apps/garage/compose.yaml`,
 
 | Dataset | What | Consumer |
 |--|--|--|
-| `slow/k8s-csi` | one directory per `bulk` PV, plus static `syncthing/`, `memos/`, `nextcloud/` | NFS, csi-driver-nfs |
+| `slow/k8s-csi` | one directory per `bulk` PV, plus static `memos/`, `nextcloud/` | NFS, csi-driver-nfs |
 | `slow/garage/{meta,data}` | Garage LMDB and blocks, quota 1T | Garage |
 | `slow/ha-backups` | Home Assistant's own backups | SMB, user `ha-backup` |
 | `slow/node-exporter` | textfile metrics, rewritten every minute | node-exporter |
@@ -180,7 +180,7 @@ Last done: 2026-11-04, `fast` from 1x 500G to 2x 1TB.
 ## What breaks without it
 
 Everything with state. NAS down: every `fast` and `bulk` PVC hangs (Vaultwarden,
-Pocket ID, OpenBao, Syncthing, Zot, ...), PBS and VolSync backups fail, Home
+Pocket ID, OpenBao, Nextcloud, Zot, ...), PBS and VolSync backups fail, Home
 Assistant backups fail, SMB and Time Machine are gone, NAS metrics stop. VMs on
 titan's `local` keep running. Garage alone down: no new backups and no
 restores; `GarageDown` fires.
