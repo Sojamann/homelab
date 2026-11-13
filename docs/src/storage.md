@@ -54,7 +54,7 @@ graph TD
 | `kassenbuch-data` | `bulk` | 10Gi | ZFS snapshots |
 | `supplement-tracker-data` | `bulk` | 1Gi | ZFS snapshots |
 | `zot-data` | `bulk` | 20Gi (label only) | ZFS snapshots |
-| `slow/users/<name>/files` | `slow`, SMB per person | -- | ZFS snapshots |
+| `slow/users/<name>/files` | `slow`, SMB per person | -- | none, drop share; personal files live in Nextcloud |
 | `slow/users/<name>/time-machine` | `slow`, SMB, quota | -- | none, by design |
 | `slow/garage` | `slow`, Garage S3, quota 1T | -- | ZFS snapshots, 7d |
 | `slow/ha-backups` | `slow`, SMB, quota | -- | ZFS snapshots, 14d |
@@ -107,6 +107,14 @@ expansion allowed. Every driver action is an API call -- no ssh to the NAS.
 
 The driver owns everything under `fast/k8s-csi` (`create_ancestors` on the
 first PVC): no datasets, subsystems or snapshot tasks are made by hand there.
+
+Each zvol carries the user property `lab:pvc` = `<namespace>/<pvc>`, set by
+the driver at creation (`zfs.datasetProperties`). It is how a zvol is found by
+app on the NAS:
+
+```sh
+zfs list -o name,lab:pvc -r fast/k8s-csi/vols
+```
 
 ### Snapshots
 

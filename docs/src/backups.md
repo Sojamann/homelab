@@ -31,7 +31,7 @@ graph LR
   VMS -.->|"HA's own backups, SMB"| HAB
   ETCD -.->|"talosctl etcd snapshot, by hand"| LAPTOP
   LAPTOP <-->|git push| GH
-  ZFS -.-> GA & HAB & BULK & USERS
+  ZFS -.-> GA & HAB & BULK
   nas -.-x B2
 ```
 
@@ -63,7 +63,7 @@ route cannot apply. *Other* lists the incidental copies under
 | **Talos VM** (4010) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | machine secrets (tofu state) | ✓ by hand, no schedule | ✗ | |
 | **PBS VM** (162) | n/a | ✗ excluded | n/a | n/a | n/a | n/a | ✗ | rebuilt by hand |
 | **Cluster objects** | n/a | via the Talos VM | n/a | n/a | ✓ tofu state | ✓ by hand | ✗ | flux/ in git |
-| `slow/users/*/files` | ✓ 24 hourly + 30 daily | n/a | n/a | n/a | n/a | n/a | ✗ first in line | |
+| `slow/users/*/files` | ✗ drop share only | n/a | n/a | n/a | n/a | n/a | ✗ | personal files live in Nextcloud |
 | `slow/users/*/time-machine` | ✗ by design | n/a | n/a | n/a | n/a | n/a | ✗ | the Mac is the original |
 | `slow/garage` (every S3 backup) | ✓ 7 daily | n/a | n/a | n/a | n/a | n/a | ✗ | Garage metadata snapshot 6h |
 | `slow/ha-backups` | ✓ 14 daily | n/a | n/a | n/a | n/a | n/a | ✗ | |
@@ -100,17 +100,18 @@ protection against losing the pool. Built in
 | Dataset | Task | Keeps |
 |--|--|--|
 | `slow/k8s-csi` | hourly + daily, not recursive (PVs are directories) | 24h + 30d |
-| `slow/users` | hourly + daily, recursive, excludes `slow/users/*/time-machine` | 24h + 30d |
 | `slow/garage` | daily, recursive (`meta` and `data` stay consistent) | 7d |
 | `slow/ha-backups` | daily | 14d |
-| `slow/node-exporter`, `time-machine`, `fast` | none | -- |
+| `slow/users`, `slow/node-exporter`, `fast` | none | -- |
 
 Why the gaps:
 
 - `fast` -- democratic-csi owns it. A snapshot it does not know about blocks
   the zvol destroy behind a PVC (stuck `Terminating`), and it would die with
   the drive anyway. VolSync covers it instead.
-- `time-machine` -- a snapshot pins the bands TM deletes; it grows forever.
+- `users` -- `files` is only a drop share, personal files live in
+  [Nextcloud](workloads/nextcloud.md). `time-machine` below it: a snapshot
+  pins the bands TM deletes; it grows forever.
 - `garage` short -- snapshots pin the blocks PBS GC frees. Kept at all because
   Garage has no object lock: this is what survives a client deleting its own
   bucket.
@@ -122,7 +123,6 @@ Telegram (set up in the UI, not in this repo). In the UI, the task list
 shows the last run. Or in a NAS shell (UI *System* -> *Shell*):
 
 ```sh
-zfs list -t snapshot -o name,creation -s creation slow/users | tail -3
 zfs list -t snapshot -o name,creation -s creation slow/k8s-csi | tail -3
 ```
 
@@ -130,8 +130,8 @@ zfs list -t snapshot -o name,creation -s creation slow/k8s-csi | tail -3
 dataset's mountpoint. Copy out what you need:
 
 ```sh
-ls /mnt/slow/users/<name>/files/.zfs/snapshot/
-cp -a /mnt/slow/users/<name>/files/.zfs/snapshot/<snap>/<path> /mnt/slow/users/<name>/files/<path>
+ls /mnt/slow/k8s-csi/.zfs/snapshot/
+cp -a /mnt/slow/k8s-csi/.zfs/snapshot/<snap>/<dir>/<path> /mnt/slow/k8s-csi/<dir>/<path>
 ```
 
 A `bulk` PVC is a directory under `slow/k8s-csi` (`pvc-<uuid>`, or a
@@ -505,7 +505,7 @@ before that resource runs. Untested here; upstream:
 
 ## Off-site (B2) {#off-site}
 
-**Not built.** Intended: Backblaze B2, `users/` first.
+**Not built.** Intended: Backblaze B2, Nextcloud's files first.
 Until it exists, losing the NAS loses every backup on this page.
 
 **Last verified:** n/a.

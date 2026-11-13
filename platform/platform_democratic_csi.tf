@@ -95,6 +95,13 @@ resource "helm_release" "democratic_csi" {
           detachedSnapshotsDatasetParentName = local.csi_dataset_snapshots
           zvolBlocksize                      = "16K" # (driver default)
           zvolEnableReservation              = true  # disable over-subscribing storage
+
+          # zvols are named after the PV uuid; this tags them `<ns>/<pvc>` so
+          # NAS-side restores (and replicas of deleted PVCs) are found by app.
+          # Only applies at creation.
+          datasetProperties = {
+            "lab:pvc" = "{{{parameters.[csi.storage.k8s.io/pvc/namespace]}}}/{{{parameters.[csi.storage.k8s.io/pvc/name]}}}"
+          }
         }
 
         nvmeof = {

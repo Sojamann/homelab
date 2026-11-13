@@ -144,17 +144,14 @@ by hand, and every `bulk` volume lives within it.
 | `garage/data`               | 1M         | lz4   | via `garage` task | Garage (blocks)         |
 | `ha-backups`                | 1M         | lz4   | daily, **14d**    | SMB, Home Assistant     |
 | `node-exporter`             | 128K       | lz4   | **none**          | node-exporter app (ro)  |
-| `users`                     | 128K       | zstd  | hourly (24h retention) + daily (30d retention), recursive, exclude `users/*/time-machine` | -- (children only) |
-| `users/<name>`              | 128K       | zstd  | via `users` task  | -- (children only)      |
-| `users/<name>/files`        | 128K       | zstd  | via `users` task  | SMB, per person         |
+| `users`                     | 128K       | zstd  | **none**          | -- (children only)      |
+| `users/<name>`              | 128K       | zstd  | **none**          | -- (children only)      |
+| `users/<name>/files`        | 128K       | zstd  | **none**          | SMB, per person         |
 | `users/<name>/time-machine` | 1M         | lz4   | **none**          | SMB, TM preset + quota  |
 
 Why the "none"s and the short one: [ZFS snapshots](../docs/src/backups.md#zfs-snapshots).
 Setting them up:
 
-- `time-machine` -- the recursive task on `slow/users` excludes it via the
-  pattern `slow/users/*/time-machine` (*Exclude* field on the task). One
-  recursive task covers every user, current and future -- no per-user task.
 - `garage` -- recursive, so `meta` and `data` stay consistent.
 - `node-exporter` -- rewritten every minute, nothing worth keeping.
 - `ha-backups` -- 1M because a backup is one multi-GB tar written straight
