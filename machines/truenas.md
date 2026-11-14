@@ -129,7 +129,8 @@ everywhere by leaving it alone. Create structure only -- permissions come after.
 Nothing on `fast` is created here. democratic-csi makes its own datasets on the
 first PVC and owns them entirely -- see [platform](../platform/README.md). They
 inherit the pool-root properties above, which is the only reason those matter
-for `fast`. **No snapshot task on `fast`** -- why: [ZFS snapshots](../docs/src/backups.md#zfs-snapshots).
+for `fast`. Its snapshots and replica are set up after the first PVC exists:
+[Snapshots of `fast`](#fast-snapshots).
 
 `slow/k8s-csi` is created here, and that asymmetry is the second CSI driver:
 csi-driver-nfs has no API to the NAS and no concept of a dataset. It mounts one
@@ -209,6 +210,37 @@ does **not** inherit the parent ACL -- set it on `files` explicitly and verify.
 `ha-backup:ha-backup`, `owner@` and `builtin_administrators` Full Control, no
 `everyone@`. The user, the group, the dataset and the share are one unit here
 too -- it is just not a person.
+
+### Snapshots of `fast` {#fast-snapshots}
+
+Needs `fast/k8s-csi/vols`, so after the first `fast` PVC. Why it looks like
+this: [ZFS snapshots](../docs/src/backups.md#zfs-snapshots).
+
+1. *Cron Jobs* -> *Add*, user `root`, `5 * * * *` -- **before** the snapshot
+   tasks, or the first snapshot blocks every PVC delete:
+   ```sh
+   zfs get -H -r -t snapshot -s inherited -o name democratic-csi:managed_resource fast/k8s-csi/vols | xargs -r -n50 zfs set democratic-csi:managed_resource=false; zfs get -H -r -s local -o name,value lab:pvc fast/k8s-csi/vols | while read n v; do d=slow/fast-replica/${n##*/}; zfs list "$d" >/dev/null 2>&1 && zfs set lab:pvc="$v" "$d"; done
+   ```
+2. *Periodic Snapshot Tasks*, both on `fast/k8s-csi/vols`, recursive, no
+   excludes, schema `auto-%Y-%m-%d_%H-%M` (same as `k8s-csi`):
+   hourly at `:00`, lifetime 1 day; daily at `00:00`, lifetime 30 days.
+   Nothing on `fast` itself.
+3. *Replication Tasks* -> *Add* -> *Advanced*:
+   - transport *Local*, source `fast/k8s-csi/vols` only, recursive
+   - destination `slow/fast-replica` -- **not** created by hand; the first run
+     creates it, and an existing one fails for lack of a common snapshot
+   - periodic snapshot tasks: the two above; *Run Automatically*
+   - retention *Same as Source*
+   - *Include Dataset Properties* **off**, *Encryption* **on** with *Inherit
+     Encryption* -- TrueNAS refuses both together; the cron in step 1 copies
+     `lab:pvc` instead
+   - *Replication from scratch* **off** -- on a rebuilt `fast` it would wipe the
+     replica
+4. verify after a run:
+   ```sh
+   zfs list -r -o name,lab:pvc slow/fast-replica
+   zfs get -H encryptionroot slow/fast-replica    # slow, not fast
+   ```
 
 ## Shares and Services
 
@@ -339,13 +371,18 @@ node-exporter as a custom app, scraped by the cluster's Prometheus -- see
    zpool list -Hp -o name,size,alloc,free | awk '{printf "nas_zpool_size_bytes{pool=\"%s\"} %s\nnas_zpool_allocated_bytes{pool=\"%s\"} %s\nnas_zpool_free_bytes{pool=\"%s\"} %s\n",$1,$2,$1,$3,$1,$4}' > /mnt/slow/node-exporter/zpool.prom.tmp && mv /mnt/slow/node-exporter/zpool.prom.tmp /mnt/slow/node-exporter/zpool.prom
    ```
    node-exporter cannot see pool size; `mv` keeps it from reading half a file
-4. *Apps* -> *Discover Apps* -> *Custom App* -> *Install via YAML*: paste
-   [apps/node-exporter/compose.yaml](./truenas/apps/node-exporter/compose.yaml)
-5. verify from Trusted:
+4. *Cron Jobs* -> *Add*, user `root`, `*/10 * * * *` -- newest snapshot per
+   watched dataset, for `NasSnapshotStale`:
    ```sh
-   curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|node_zfs_zpool_state)'
+   for d in fast/k8s-csi/vols slow/fast-replica slow/k8s-csi; do t=$(zfs list -Hp -t snapshot -o creation -s creation -d 1 "$d" | tail -1); [ -n "$t" ] && echo "nas_snapshot_newest_timestamp_seconds{dataset=\"$d\"} $t"; done > /mnt/slow/node-exporter/snapshots.prom.tmp && mv /mnt/slow/node-exporter/snapshots.prom.tmp /mnt/slow/node-exporter/snapshots.prom
    ```
-   every pool with size, and `state="online"` at `1`
+5. *Apps* -> *Discover Apps* -> *Custom App* -> *Install via YAML*: paste
+   [apps/node-exporter/compose.yaml](./truenas/apps/node-exporter/compose.yaml)
+6. verify from Trusted:
+   ```sh
+   curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|nas_snapshot|node_zfs_zpool_state)'
+   ```
+   every pool with size, `state="online"` at `1`, one `nas_snapshot` per dataset
 
 Pool state comes from node-exporter itself; SMART is not exported.
 

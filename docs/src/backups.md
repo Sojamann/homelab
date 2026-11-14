@@ -100,15 +100,22 @@ protection against losing the pool. Built in
 | Dataset | Task | Keeps |
 |--|--|--|
 | `slow/k8s-csi` | hourly + daily, not recursive (PVs are directories) | 24h + 30d |
+| `fast/k8s-csi/vols` | hourly + daily, recursive (a zvol per PV), same minute as `slow/k8s-csi` | 24h + 30d |
+| `slow/fast-replica` | local replication of `fast/k8s-csi/vols` after each snapshot | same as source |
 | `slow/garage` | daily, recursive (`meta` and `data` stay consistent) | 7d |
 | `slow/ha-backups` | daily | 14d |
-| `slow/users`, `slow/node-exporter`, `fast` | none | -- |
+| `slow/users`, `slow/node-exporter` | none | -- |
 
 Why the gaps:
 
-- `fast` -- democratic-csi owns it. A snapshot it does not know about blocks
-  the zvol destroy behind a PVC (stuck `Terminating`), and it would die with
-  the drive anyway. VolSync covers it instead.
+- `fast` -- only `fast/k8s-csi/vols`, the zvols. democratic-csi refuses to
+  delete a zvol whose snapshots carry `democratic-csi:managed_resource=true`,
+  which snapshots inherit; a NAS cron flips it to `false` hourly at `:05`
+  (until then a PVC delete just waits -- `PersistentVolumeStuckReleased`).
+  The same cron copies `lab:pvc` onto the replica, which TrueNAS cannot send
+  alongside re-encryption. The replica is what survives the `fast` pool and a
+  deleted PVC: the driver's delete takes the zvol's own snapshots with it.
+  VolSync still runs in parallel until the restore drill passes.
 - `users` -- `files` is only a drop share, personal files live in
   [Nextcloud](workloads/nextcloud.md). `time-machine` below it: a snapshot
   pins the bands TM deletes; it grows forever.
@@ -118,9 +125,10 @@ Why the gaps:
 
 **Credentials.** The NAS UI login; see [TrueNAS](platform/truenas.md).
 
-**Health check.** Nothing in Prometheus; TrueNAS's own alerts go to
-Telegram (set up in the UI, not in this repo). In the UI, the task list
-shows the last run. Or in a NAS shell (UI *System* -> *Shell*):
+**Health check.** `NasSnapshotStale` covers `fast/k8s-csi/vols`,
+`slow/fast-replica` and `slow/k8s-csi` (see [Monitoring](monitoring.md#alerts));
+the rest only through TrueNAS's own alerts to Telegram (set up in the UI, not
+in this repo). In the UI, the task list shows the last run. Or in a NAS shell (UI *System* -> *Shell*):
 
 ```sh
 zfs list -t snapshot -o name,creation -s creation slow/k8s-csi | tail -3

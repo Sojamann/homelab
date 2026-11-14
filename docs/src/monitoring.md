@@ -76,8 +76,9 @@ down.
 
 - PBS backup, prune, GC and verify jobs -- PVE and PBS notify on failure,
   to Telegram (set up in the UI, not in this repo)
-- ZFS snapshot and scrub tasks -- TrueNAS's own alerts, to Telegram (set up in the UI, not in this repo); SMART (not
-  exported, and not set up)
+- ZFS scrub tasks, and snapshot tasks other than the ones `NasSnapshotStale`
+  watches -- TrueNAS's own alerts, to Telegram (set up in the UI, not in this
+  repo); SMART (not exported, and not set up)
 - Home Assistant and its own backups. No scrape, and k8s cannot reach the
   VM (`k8s-deny-internal`).
 - Proxmox and TrueNAS certificate renewals
@@ -93,6 +94,9 @@ Lab rules, all labelled `origin: lab`:
 | `NasDown` | critical | NAS node-exporter unreachable 5m | `infrastructure/configs/nas/` |
 | `NasPoolNotOnline` | critical | a pool not `ONLINE` 5m | same |
 | `NasPoolFull` | warning | a pool > 80% for 15m | same |
+| `NasSnapshotStale` | warning | newest snapshot of `fast/k8s-csi/vols`, `slow/fast-replica` or `slow/k8s-csi` older than 2h, for 15m | same |
+| `NasSnapshotMetricsAbsent` | warning | no snapshot metrics at all 1h (textfile cron gone) | same |
+| `PersistentVolumeStuckReleased` | warning | a `fast` PV `Released` 1h -- the delete is blocked, see [Storage](storage.md#fast) | same |
 | `GarageDown` | critical | Garage metrics unreachable 5m | `infrastructure/configs/garage/` |
 | `ProxmoxExporterDown` | critical | node- or pve-exporter unreachable 5m | `infrastructure/configs/proxmox/` |
 | `ProxmoxQuorumLost` | critical | cluster not quorate 5m | same |
@@ -205,12 +209,14 @@ A custom app on the NAS (`machines/truenas/apps/node-exporter/compose.yaml`),
 cluster, no firewall rule. node-exporter cannot see pool size, so a root cron
 job writes it every minute to the textfile directory `slow/node-exporter`
 (`nas_zpool_size_bytes`, `nas_zpool_allocated_bytes`, `nas_zpool_free_bytes`;
-written to `.tmp` and `mv`'d so it is never read half-written). Pool state
+written to `.tmp` and `mv`'d so it is never read half-written). A second one,
+every 10 minutes, writes `nas_snapshot_newest_timestamp_seconds{dataset}` for
+the snapshot datasets that [Backups](backups.md#zfs-snapshots) relies on. Pool state
 (`node_zfs_zpool_state`) comes from node-exporter itself. Install steps:
 [Build guide: TrueNAS](build/machines/truenas.md#monitoring).
 
 ```sh
-curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|node_zfs_zpool_state)'
+curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|nas_snapshot|node_zfs_zpool_state)'
 ```
 
 Every pool with a size, and `state="online"` at `1`. A bump of its image is
