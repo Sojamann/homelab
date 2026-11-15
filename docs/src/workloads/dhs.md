@@ -61,30 +61,33 @@ The next CronJob run picks it up.
 | What | Where | State? |
 |--|--|--|
 | postgres (17) | on the box | **yes** -- the only thing backed up |
-| `postgres.dump`, `pg_dump -Fc`, latest only | PVC `postgres-dump`, `fast`, 5Gi | a copy; its history is restic's |
+| `postgres.dump`, `pg_dump -Fc`, latest only | PVC `postgres-dump`, `fast`, 5Gi | a copy; its history is the snapshots' |
 | compose files, tailscale state, the box | on the box | **yes**, not backed up |
 
 The dump job (`dump.yaml`, `00:30` UTC) writes to `postgres.dump.tmp`,
-`sync`s and renames, so the backup's clone never catches a half-written file.
+`sync`s and renames, so a snapshot never catches a half-written file.
 It runs as the read-only `backup` role (`pg_read_all_data`).
 
 ## Backup & restore
 
-Covered by [VolSync](../backups.md#volsync) on `postgres-dump`: nightly
-`01:00` UTC, after the dump, retain daily 14, weekly 8, monthly 6. The rest of
-the box is [not covered](../backups.md#not-covered).
+Covered by [ZFS snapshots](../backups.md#zfs-snapshots) of `postgres-dump`,
+24 hourly + 30 daily, replicated to `slow/fast-replica`: a dump per night for
+30 days. The rest of the box is [not covered](../backups.md#not-covered).
 
 **Restore.** Untested end to end; the dump itself is drilled (below). The
 box's postgres is overwritten in place, so stop the app first.
 
 1. **Pick the dump.** Last night's is still on `postgres-dump`. Anything older,
-   or a lost PVC: the generic [VolSync restore](../backups.md#volsync) over
-   `postgres-dump` (`restoreAsOf` for a point in time), with
+   or a lost PVC: the generic [`fast` restore](../backups.md#zfs-snapshots)
+   over `postgres-dump` (a daily snapshot from the night after the wanted
+   dump), with
    ```sh
-   NS=dhs KS=dhs PVC=postgres-dump MOVER_UID=70   # no Deployment to scale
+   NS=dhs KS=dhs PVC=postgres-dump   # no Deployment to scale
    ```
    Suspend `dhs` anyway, or the CronJob overwrites the dump at `00:30`.
-   Without the cluster: plain restic against `k8s-backups/dhs/postgres-dump`.
+   Without the cluster: on the NAS, clone the snapshot, `mount` the clone's
+   device (ext4; the clone takes the journal replay, not the snapshot), copy
+   the file out, unmount, destroy the clone.
 2. **Get it out of the cluster.** A pod mounting the PVC read-only, then:
    ```sh
    kubectl -n dhs run fetch --image=docker.io/library/busybox:1.37 --restart=Never \
@@ -123,9 +126,8 @@ docker compose exec -T <postgres> psql -U postgres -d postgres \
 
 Then `DhsDumpStale` stays quiet after the next night's dump.
 
-**Drill.** Run once on 2026-10-27, in `dhs`: a `ReplicationDestination`
-(`trigger.manual`, `copyMethod: Direct`, uid 70) into a throwaway `fast` PVC
-`drill`, then a pod on `postgres:17.11-alpine` that mounts it read-only,
+**Drill.** Run once on 2026-10-27, in `dhs`: the dump restored from a backup
+into a throwaway `fast` PVC `drill`, then a pod on `postgres:17.11-alpine` that mounts it read-only,
 starts a socket-only postgres in an `emptyDir` and restores into it:
 
 ```sh
@@ -144,8 +146,8 @@ See [Monitoring](../monitoring.md).
 
 - `DhsDown` -- node_exporter unreachable for 5m: the box, its tailscale, or
   the proxy. Critical.
-- `DhsDumpStale` -- no successful dump in 26h. Warning. Without it VolSync
-  would keep backing up a stale file without complaint.
+- `DhsDumpStale` -- no successful dump in 26h. Warning. Without it the
+  snapshots would keep a stale file without complaint.
 
 **Logs** are not collected: they stay on the box (`docker compose logs`).
 A pull design -- docker's `journald` log driver, `systemd-journal-gatewayd`

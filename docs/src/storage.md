@@ -38,17 +38,17 @@ graph TD
 
 | What | Tier | Size | Backed up by |
 |--|--|--|--|
-| `vaultwarden-data` | `fast` | 1Gi | VolSync |
-| `pocket-id-state` | `fast` | 1Gi | VolSync |
-| `memos-data` | `fast` | 1Gi | VolSync |
-| `mealie-data` | `fast` | 5Gi | VolSync |
-| `postgres-dump` (DHS) | `fast` | 5Gi | VolSync |
-| `nextcloud-html` | `fast` | 5Gi | VolSync |
-| `nextcloud-db-1` (CNPG) | `fast` | 5Gi | VolSync, via `db-dump` (`fast`, 5Gi) |
-| `data-openbao-0` | `fast` | 1Gi | rebuilt by tofu |
-| Prometheus | `fast` | 20Gi (capped at 18GB, 30d) | not kept |
-| VictoriaLogs | `fast` | 20Gi (capped at 16GiB, 30d) | not kept |
-| Alertmanager | `fast` | 1Gi | not kept |
+| `vaultwarden-data` | `fast` | 1Gi | ZFS snapshots + replica |
+| `pocket-id-state` | `fast` | 1Gi | ZFS snapshots + replica |
+| `memos-data` | `fast` | 1Gi | ZFS snapshots + replica |
+| `mealie-data` | `fast` | 5Gi | ZFS snapshots + replica |
+| `postgres-dump` (DHS) | `fast` | 5Gi | ZFS snapshots + replica |
+| `nextcloud-html` | `fast` | 5Gi | ZFS snapshots + replica |
+| `nextcloud-db-1` (CNPG) | `fast` | 5Gi | ZFS snapshots + replica, crash-consistent |
+| `data-openbao-0` | `fast` | 1Gi | ZFS snapshots + replica; rebuilt by tofu anyway |
+| Prometheus | `fast` | 20Gi (capped at 18GB, 30d) | ZFS snapshots + replica (history only) |
+| VictoriaLogs | `fast` | 20Gi (capped at 16GiB, 30d) | ZFS snapshots + replica (history only) |
+| Alertmanager | `fast` | 1Gi | ZFS snapshots + replica (history only) |
 | `memos-assets` -> `slow/k8s-csi/memos` | `bulk`, static PV | 5Gi (label only) | ZFS snapshots |
 | `nextcloud-data` -> `slow/k8s-csi/nextcloud` | `bulk`, static PV | 500Gi (label only) | ZFS snapshots |
 | `kassenbuch-data` | `bulk` | 10Gi | ZFS snapshots |
@@ -106,7 +106,9 @@ expansion allowed. Every driver action is an API call -- no ssh to the NAS.
   create them.
 
 The driver owns everything under `fast/k8s-csi` (`create_ancestors` on the
-first PVC): no datasets, subsystems or snapshot tasks are made by hand there.
+first PVC): no datasets or subsystems are made by hand there. The snapshot
+tasks on `fast/k8s-csi/vols` are the exception -- see
+[ZFS snapshots](backups.md#zfs-snapshots).
 
 Each zvol carries the user property `lab:pvc` = `<namespace>/<pvc>`, set by
 the driver at creation (`zfs.datasetProperties`). It is how a zvol is found by
@@ -136,9 +138,8 @@ PVC stuck `Terminating` with nothing in Kubernetes saying why.
 **But the detached restore fails on this pool**: `fast` is encrypted, and
 TrueNAS refuses the driver's `send | recv` (*"Destination dataset must be
 encrypted"*), so a PVC from a VolumeSnapshot stays `Pending`. Snapshots
-themselves work; a rollback is `zfs rollback` on the NAS. VolSync avoids it
-with plain clones and `Direct` restores -- see
-[VolSync](backups.md#volsync).
+themselves work. Restores happen on the NAS instead, by clone + `dd` -- see
+[ZFS snapshots](backups.md#zfs-snapshots).
 
 A snapshot pins every block the live volume overwrites. Nothing prunes them:
 a forgotten one on a write-heavy PVC fills the pool.
@@ -165,7 +166,7 @@ one directory per PV and has no API to the NAS, which is why the dataset
 ## Admin
 
 **Choosing a class.** `fast` for anything latency-bound or SQLite-on-a-block-
-device; it needs a `backup.yaml` if it cannot be rebuilt. `bulk` for what must
+device; the NAS snapshots cover it automatically. `bulk` for what must
 sit on the mirror outright, or what several pods share.
 
 **Moving a PVC between classes.** `storageClassName` is immutable, so copy:
@@ -208,22 +209,25 @@ zfs list -o name,used,avail,refer -r slow -d 2
 - **One `fast` NVMe dead** -- nothing visible; the mirror runs degraded
   until the drive is [replaced](platform/truenas.md#replace-drive).
 - **Both `fast` NVMes dead** -- every `fast` PVC gone; see
-  [VolSync, *Lost `fast` pool*](backups.md#volsync).
+  [ZFS snapshots, *Lost `fast` pool*](backups.md#zfs-snapshots).
 - **democratic-csi down** -- running pods keep their volumes; new `fast` PVCs
   stay `Pending`, deletes hang. Same for csi-driver-nfs and `bulk`.
-- **snapshot-controller down** -- no new VolumeSnapshots; VolSync is
-  unaffected (it clones).
+- **snapshot-controller down** -- no new VolumeSnapshots; the NAS's own
+  snapshots are unaffected.
 - **TrueNAS API key expired or revoked** -- same as democratic-csi down.
 
 ## Gotchas
 
 - **`reclaimPolicy: Delete` on both classes.** `kubectl delete pvc` destroys a
-  `fast` zvol immediately -- only a VolSync backup survives it. A deleted
+  `fast` zvol immediately, with its snapshots -- only `slow/fast-replica`
+  survives it. A deleted
   `bulk` directory survives in the `slow/k8s-csi` snapshots for 30 days.
 - **A recreated `bulk` PVC is a new, empty directory.** The old data stays in
   the old `pvc-<uuid>` directory (or its snapshots) and has to be copied over.
-- **Never snapshot `fast` outside the driver.** A ZFS snapshot it does not
-  know blocks the zvol destroy, and the PVC sits `Terminating`.
+- **A snapshot of a zvol blocks its delete** while it inherits
+  `democratic-csi:managed_resource=true`: the PV sits `Released`. The NAS
+  cron flips it on every snapshot under `fast/k8s-csi/vols` at `:05`; a
+  snapshot taken by hand is covered by the next run.
 - **Recreating the NVMe-oF port changes its id**: volumes then provision and
   never attach, with no error mentioning a port. Edit the port (`PUT`), don't
   recreate it -- see [Build guide: TrueNAS](build/machines/truenas.md#shares-and-services).

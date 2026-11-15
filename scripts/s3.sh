@@ -2,8 +2,7 @@
 # `aws s3` against Garage on the NAS, as one of its keys from the vault.
 #
 #   scripts/s3.sh <key> <aws s3 args...>
-#   scripts/s3.sh volsync ls s3://k8s-backups/
-#   scripts/s3.sh volsync rm --recursive --dryrun s3://k8s-backups/<ns>/<pvc>/
+#   scripts/s3.sh pbs ls --summarize --human-readable --recursive s3://proxmox-backups/
 #
 # <key> names the vault pair `garage_<key>_key_id` / `garage_<key>_secret_key`.
 # A key only sees the buckets it was granted.

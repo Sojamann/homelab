@@ -25,7 +25,7 @@ graph TD
     subgraph nas["NAS 10.212.2.150 + 10.212.4.150<br/>UGREEN DXP4800 GT, TrueNAS"]
       FAST[("fast<br/>2x 1TB NVMe mirror")]
       SLOW[("slow<br/>2x 4TB HDD mirror")]
-      GARAGE["app: Garage S3<br/>proxmox-backups, k8s-backups"]
+      GARAGE["app: Garage S3<br/>proxmox-backups"]
       NEXP["app: node-exporter"]
     end
 
@@ -35,15 +35,15 @@ graph TD
       PBS["VM 162 PBS<br/>10.212.2.162"]
       subgraph talos["VM 4010 talos-cp-1, 10.212.4.10, VLAN 40"]
         K8S["Kubernetes, Cilium<br/>Gateway 10.212.4.200"]
-        INFRA["Flux, OpenBao, Pocket ID, Zot,<br/>CNPG, VolSync, monitoring"]
+        INFRA["Flux, OpenBao, Pocket ID, Zot,<br/>CNPG, monitoring"]
         APPS["Vaultwarden, Memos, Mealie,<br/>Nextcloud, Kassenbuch,<br/>Supplement tracker, Glance, DHS backup"]
       end
     end
   end
 
   K8S -->|"fast: NVMe-oF<br/>bulk: NFS"| FAST & SLOW
+  FAST -.->|"snapshots, replicated hourly"| SLOW
   PBS -->|S3| GARAGE
-  APPS -.->|VolSync, S3| GARAGE
   GARAGE --- SLOW
   INFRA -->|scrapes| NEXP
   INFRA -->|alerts| TG & HB

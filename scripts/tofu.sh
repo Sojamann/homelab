@@ -125,14 +125,6 @@ case "$layer" in
     TF_VAR_garage_metrics_token="$(vault_require secrets/vault.yml garage_metrics_token)"
     export TF_VAR_garage_metrics_token
 
-    # VolSync's restic password and its Garage key -- see flux/docs/volsync.md.
-    for key in volsync_restic_password garage_volsync_key_id \
-      garage_volsync_secret_key; do
-      value="$(vault_require secrets/vault.yml "$key")"
-      export "TF_VAR_$key=$value"
-    done
-    unset value
-
     # The tailscale operator's OAuth client, issued in the tailscale console.
     for key in tailscale_operator_client_id tailscale_operator_client_secret; do
       value="$(vault_require secrets/vault.yml "$key")"

@@ -42,15 +42,15 @@ tofu) and everything in the manifests.
 
 ## Backup & restore
 
-Covered by [VolSync](../backups.md#volsync): nightly `00:15` UTC, retain
-daily 14, weekly 8, monthly 6. Not by ZFS snapshots (`fast` has none). The
-vault items also survive in every logged-in client's offline cache;
-attachments and Sends only in the backup.
+Covered by [ZFS snapshots](../backups.md#zfs-snapshots) of its zvol, 24 hourly + 30
+daily, replicated to `slow/fast-replica`. The vault items also
+survive in every logged-in client's offline cache; attachments and Sends only
+in the backup.
 
-**Restore.** The generic [VolSync restore](../backups.md#volsync), with:
+**Restore.** The generic [`fast` restore](../backups.md#zfs-snapshots), with:
 
 ```sh
-NS=vaultwarden KS=vaultwarden DEPLOY=vaultwarden PVC=vaultwarden-data MOVER_UID=1000
+NS=vaultwarden KS=vaultwarden DEPLOY=vaultwarden PVC=vaultwarden-data
 ```
 
 Before restoring an **older** snapshot over a working instance, export the

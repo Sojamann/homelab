@@ -26,8 +26,7 @@ shares stay as they are, and Nextcloud's files are its own. Using it is upstream
 ## Where it runs
 
 Namespace `nextcloud`: Deployment `nextcloud` (with a `cron` sidecar running
-background jobs every 5 minutes), CronJob `db-dump`, CNPG `Cluster`
-`nextcloud-db`. Flux Kustomization `nextcloud`.
+background jobs every 5 minutes), CNPG `Cluster` `nextcloud-db`. Flux Kustomization `nextcloud`.
 Wiring: [Build guide: Nextcloud](../build/flux/docs/nextcloud.md).
 
 ## Data
@@ -37,58 +36,48 @@ Wiring: [Build guide: Nextcloud](../build/flux/docs/nextcloud.md).
 | `nextcloud-data` -> `/var/www/html/data` | everyone's files, trash, versions | static PV on `slow/k8s-csi/nextcloud`, `Retain` | **yes** |
 | `nextcloud-html` -> `/var/www/html` | code, `config.php` (instance id, secret, salt), installed apps | `fast`, 5Gi | **yes** -- `secret` decrypts stored app values |
 | `nextcloud-db-1` (CNPG) | users, shares, the file cache, app settings | `fast`, 5Gi | **yes** |
-| `db-dump` | last night's `pg_dump -Fc` | `fast`, 5Gi | staging copy |
 
 `nextcloud-data` is made by hand: `slow/k8s-csi/nextcloud`, owned by uid 33,
 mode `0770` -- see [machines/truenas.md](../build/machines/truenas.md). The
 500Gi capacity is a label, not enforced; no per-user quota.
 
 The db and the files belong together: the db's file cache indexes the
-directory. They are backed up at different times, so a restore ends with a
-rescan.
+directory. Their snapshots are seconds apart, not atomic, so a restore ends
+with a rescan.
 
 Not state: the admin password and Pocket ID client (OpenBao), `lab.config.php`
 and the start hook (git).
 
 ## Backup & restore
 
-- **Files:** [ZFS snapshots](../backups.md#zfs-snapshots) on `slow/k8s-csi`,
-  24 hourly + 30 daily. Not in VolSync, nothing off-box. Deleted files also
-  sit in Nextcloud's trash bin, older versions under *Versions*.
-- **Db:** `db-dump` at `01:15` UTC, then [VolSync](../backups.md#volsync) at
-  `01:45`, retain daily 14, weekly 8, monthly 6.
-- **`nextcloud-html`:** VolSync at `02:00`, same retention.
+All three in the [ZFS snapshots](../backups.md#zfs-snapshots), 24 hourly + 30
+daily, at the same minute; nothing off-box.
 
-**Restore.** Untested. Stop everything first:
+- **Files:** on `slow/k8s-csi`. Deleted files also sit in Nextcloud's trash
+  bin, older versions under *Versions*.
+- **Db** (`nextcloud-db-1`) and **`nextcloud-html`:** their zvols, replicated
+  to `slow/fast-replica`. The db's is crash-consistent: postgres replays its
+  WAL on start, as after a power cut.
+
+**Restore.** Untested. Pick one snapshot name for all three. Stop everything
+first -- the db by hibernating its `Cluster`, which deletes the pod but keeps
+the PVC:
 
 ```sh
 flux suspend kustomization nextcloud
 kubectl -n nextcloud scale deploy/nextcloud --replicas 0
-kubectl -n nextcloud patch cronjob db-dump -p '{"spec":{"suspend":true}}'
+kubectl -n nextcloud annotate cluster nextcloud-db cnpg.io/hibernation=on
 ```
 
-1. **`nextcloud-html`:** the generic [VolSync restore](../backups.md#volsync),
-   with
+1. **`nextcloud-html` and the db:** step 2 of the generic
+   [`fast` restore](../backups.md#zfs-snapshots), once per PVC:
+   `nextcloud-html` and `nextcloud-db-1`.
+2. **Files:** the generic [`bulk` restore](../backups.md#zfs-snapshots) of
+   `nextcloud/`, keeping uid 33. Skip when only the db was lost.
+3. **Up, then reconcile the db with the files:**
    ```sh
-   NS=nextcloud KS=nextcloud DEPLOY=nextcloud PVC=nextcloud-html MOVER_UID=33
-   ```
-2. **The db.** Get the dump: last night's is on `db-dump` (copy it out as in
-   [DHS](dhs.md#backup--restore), step 2, with `claimName: db-dump`); older
-   ones with restic [without the cluster](../backups.md#volsync)
-   (`NS=nextcloud PVC=db-dump`). Then, into the running instance:
-   ```sh
-   kubectl -n nextcloud exec -i nextcloud-db-1 -- \
-     pg_restore -U postgres -d nextcloud --clean --if-exists --no-owner \
-     --role=nextcloud --single-transaction < nextcloud.dump
-   ```
-   A fresh `Cluster` is fine: the dump holds no roles, CNPG creates
-   `nextcloud`, and `lab.config.php` reads the new password from env.
-3. **Files:** the NAS snapshots, `.zfs/snapshot/<name>/nextcloud/` under
-   `/mnt/slow/k8s-csi`. Copy back as uid 33. Skip when only the db was lost.
-4. **Up, then reconcile the db with the files:**
-   ```sh
+   kubectl -n nextcloud annotate cluster nextcloud-db cnpg.io/hibernation-
    flux resume kustomization nextcloud   # scales up; `suspend` is not Flux's field
-   kubectl -n nextcloud patch cronjob db-dump -p '{"spec":{"suspend":false}}'
    occ() { kubectl -n nextcloud exec deploy/nextcloud -- php occ "$@"; }
    occ maintenance:mode --on
    occ files:scan --all
@@ -136,17 +125,15 @@ proposes bumps (see [Maintenance](../maintenance.md)). The image runs
 - **There is no rollback.** The way back from a bad upgrade is a restore.
 - **`user_oidc`** is from the app store, not pinned: update it in *Apps* or
   with `occ app:update --all`.
-- **Postgres**: `imageName` in `database.yaml` and the image in `dump.yaml`
-  move together in one Renovate PR. A major is an offline in-place upgrade by
-  CNPG -- take a fresh dump first.
+- **Postgres**: `imageName` in `database.yaml`. A major is an offline
+  in-place upgrade by CNPG -- the last hourly snapshot is the way back.
 
 ### Not enabled
 
 - **Calendar, contacts, photos, office.** Files only, by decision.
 - **Redis.** Not needed at this size; add it for locking if the db's file
   locks show up as slow.
-- **Metrics.** Only `NextcloudDumpStale` (warning, no successful dump in 26h);
-  pod and PVC alerts are the chart's.
+- **Metrics.** None of its own; pod and PVC alerts are the chart's.
 
 ## Gotchas
 

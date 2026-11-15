@@ -176,7 +176,6 @@ tree: copied from the vault, or generated with `random_password`. The tree is
 | `kv/memos/app` | admin password; Pocket ID client | generated; vault |
 | `kv/mealie/app` | Pocket ID client | vault |
 | `kv/nextcloud/app` | admin password; Pocket ID client | generated; vault |
-| `kv/volsync/restic` | Garage key, restic password | vault |
 | `kv/tailscale/operator` | operator OAuth client | vault |
 | `kv/dhs/backup` | DHS postgres backup role | vault |
 | `kv/zot/registry` | push password, htpasswd | generated |

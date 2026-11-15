@@ -40,7 +40,7 @@ before its app can restart.
 ## Backup & restore
 
 [ZFS snapshots](../backups.md#zfs-snapshots) on `slow/k8s-csi`, 24 hourly +
-30 daily. Not VolSync. Everything in it is rebuildable from source.
+30 daily. Everything in it is rebuildable from source.
 
 **Restore** a lost directory: the generic `bulk` restore in
 [ZFS snapshots](../backups.md#zfs-snapshots), app `zot`, Kustomization

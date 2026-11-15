@@ -30,7 +30,7 @@ Not state: the manifests. No secrets.
 ## Backup & restore
 
 Covered by [ZFS snapshots](../backups.md#zfs-snapshots) on `slow/k8s-csi`:
-24 hourly + 30 daily. Not by VolSync. The app has no export, so this is the
+24 hourly + 30 daily. The app has no export, so this is the
 only backup. A ZFS snapshot is atomic, so db and `-wal` are caught together.
 
 **Restore.** The generic [ZFS restore](../backups.md#zfs-snapshots) of a

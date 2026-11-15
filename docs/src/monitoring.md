@@ -25,8 +25,7 @@ graph LR
   GA["Garage /metrics<br/>s3-k8s:3903, bearer"]
   PX["titan :9100 node-exporter<br/>:9221 pve-exporter"]
   DHS["DHS box :9100<br/>via tailscale egress"]
-  VS["VolSync controller"]
-  PROM -->|scrape| K & NAS & GA & PX & DHS & VS
+  PROM -->|scrape| K & NAS & GA & PX & DHS
   PROM --> AM
   GR --> PROM & VL
   VA -->|"every container's log"| VL
@@ -66,7 +65,6 @@ Kustomization `infrastructure`; rules and scrapes in
 | Garage | its admin `/metrics`, bearer `garage_metrics_token` | `garage` |
 | titan | node-exporter + pve-exporter (installed by machine-config), through `metrics-allow-proxmox` | `proxmox`, `pve` |
 | DHS box | node-exporter over the tailnet | `dhs` |
-| VolSync | controller metrics | -- |
 
 etcd, scheduler, controller-manager and kube-proxy are off: Talos binds them to
 `127.0.0.1` (and Cilium replaces kube-proxy), so they would be permanently
@@ -102,11 +100,8 @@ Lab rules, all labelled `origin: lab`:
 | `ProxmoxQuorumLost` | critical | cluster not quorate 5m | same |
 | `ProxmoxStorageFull` | warning | a PVE storage > 80% for 15m | same |
 | `ProxmoxGuestDown` | warning | an onboot guest not running 10m | same |
-| `VolSyncBackupFailing` | warning | a ReplicationSource out of sync 1h | `infrastructure/configs/volsync/` |
-| `VolSyncMetricsAbsent` | warning | no sync status at all 1h (controller or scrape dead) | same |
 | `DhsDown` | critical | DHS box unreachable over the tailnet 5m | `apps/dhs/rules.yaml` |
 | `DhsDumpStale` | warning | no successful dump in 26h | same |
-| `NextcloudDumpStale` | warning | no successful Nextcloud db dump in 26h | `apps/nextcloud/rules.yaml` |
 | `VictoriaLogsDown` | warning | VictoriaLogs not scraped 10m | `infrastructure/configs/victoria-logs/` |
 | `VictoriaLogsRetentionShort` | warning | its PVC > 90% of the 16GiB cap for 1h: logs dropped before 30d | same |
 | `VlagentDropping` | warning | a collector dropped log blocks in the last hour | same |

@@ -59,7 +59,6 @@ Classes, PVC paths and the CSI side: [Storage](../storage.md).
 | Bucket | Quota | Consumer |
 |--|--|--|
 | `proxmox-backups` | 300G | [PBS](pbs.md) |
-| `k8s-backups` | 50G | [VolSync](../backups.md#volsync) |
 
 Not state: the apps' containers (compose files in git), the certificate
 (re-orderable).
@@ -84,7 +83,7 @@ tenant).
 
 ```sh
 curl -s http://10.212.4.150:9100/metrics | grep -E '^(nas_zpool|node_zfs_zpool_state)'   # every pool, state="online" 1
-mise run s3 volsync ls s3://k8s-backups/          # Garage answers with a key
+mise run s3 pbs ls s3://proxmox-backups/          # Garage answers with a key
 kubectl get pvc -A                                # all Bound
 ```
 
@@ -121,8 +120,8 @@ Never `--owner`. Into `secrets/vault.yml` as `garage_<name>_key_id` /
 consumer gets it through OpenBao. Clients use region `lab`, path-style,
 `https://s3[-k8s].<lab_domain>:3900`.
 
-**Removing an app** that had a VolSync backup: delete its `k8s-backups`
-prefix -- [VolSync, *Removing an app*](../backups.md#volsync).
+**Removing an app** that used `fast`: destroy its zvols' replicas --
+[ZFS snapshots, *Removing an app*](../backups.md#zfs-snapshots).
 
 **node-exporter.** A custom app plus a root cron every minute that writes
 `zpool.prom` (pool size/alloc/free) into `slow/node-exporter` -- node-exporter
@@ -180,7 +179,7 @@ Last done: 2026-11-04, `fast` from 1x 500G to 2x 1TB.
 ## What breaks without it
 
 Everything with state. NAS down: every `fast` and `bulk` PVC hangs (Vaultwarden,
-Pocket ID, OpenBao, Nextcloud, Zot, ...), PBS and VolSync backups fail, Home
+Pocket ID, OpenBao, Nextcloud, Zot, ...), PBS backups and snapshots fail, Home
 Assistant backups fail, SMB and Time Machine are gone, NAS metrics stop. VMs on
 titan's `local` keep running. Garage alone down: no new backups and no
 restores; `GarageDown` fires.

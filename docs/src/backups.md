@@ -11,15 +11,16 @@ graph LR
     PBSVM["PBS VM 162<br/>not backed up"]
   end
   subgraph k8s["cluster"]
-    FASTPVC[/"fast PVCs with a backup.yaml"/]
-    VS["VolSync<br/>restic, nightly"]
     ETCD["etcd"]
+  end
+  subgraph nasf["NAS, fast mirror"]
+    FASTZ["fast/k8s-csi/vols<br/>fast PVCs, a zvol each"]
   end
   subgraph nas["NAS, slow mirror"]
     GA["Garage S3<br/>slow/garage"]
     HAB["slow/ha-backups"]
     BULK["slow/k8s-csi<br/>bulk PVCs"]
-    USERS["slow/users"]
+    REPL["slow/fast-replica"]
     ZFS[("ZFS snapshot tasks")]
   end
   LAPTOP["laptop<br/>secrets/ clone"]
@@ -27,11 +28,11 @@ graph LR
   B2["B2 off-site<br/>not built"]
 
   VMS -->|"23:00 daily"| PBSVM -->|"bucket proxmox-backups"| GA
-  FASTPVC --> VS -->|"bucket k8s-backups"| GA
+  FASTZ -->|"hourly, local replication"| REPL
   VMS -.->|"HA's own backups, SMB"| HAB
   ETCD -.->|"talosctl etcd snapshot, by hand"| LAPTOP
   LAPTOP <-->|git push| GH
-  ZFS -.-> GA & HAB & BULK
+  ZFS -.-> GA & HAB & BULK & FASTZ
   nas -.-x B2
 ```
 
@@ -41,50 +42,55 @@ What each route holds, with retention. ✓ covered, ✗ not covered, n/a the
 route cannot apply. *Other* lists the incidental copies under
 [Other copies](#other-copies).
 
-| What | [ZFS](#zfs-snapshots) | [PBS](#pbs) | [HA own](#ha-backups) | [VolSync](#volsync) | [Secrets repo](#secrets-repo) | [etcd](#etcd-snapshots) | [Off-site](#off-site) | Other |
-|--|--|--|--|--|--|--|--|--|
-| **Vaultwarden** (`vaultwarden-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | admin token hash | n/a | ✗ | clients' offline cache, items only |
-| **Memos** attachments (`slow/k8s-csi/memos`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
-| **Memos** db (`memos-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
-| **Nextcloud** files (`slow/k8s-csi/nextcloud`) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | trash bin + versions in Nextcloud; synced clients |
-| **Nextcloud** db (CNPG `nextcloud-db`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6, via the nightly dump | n/a | n/a | ✗ | last dump on `db-dump` |
-| **Nextcloud** html + config (`nextcloud-html`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | admin password, OIDC client | n/a | ✗ | |
-| **Mealie** (`mealie-data`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | n/a | n/a | ✗ | |
-| **DHS** postgres (external Hetzner box) | n/a | n/a | n/a | ✓ d14 w8 m6, via the nightly dump | backup role password | n/a | ✗ | last dump on `postgres-dump` |
-| **Kassenbuch** (`kassenbuch-data`, bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | password hash | n/a | ✗ | |
-| **Supplement tracker** (bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | |
-| **Glance** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | stateless, config in git |
-| **Home Assistant** (VM 161) | n/a | ✓ last 3, d7 w4 m6 | ✓ schedule in the appliance | n/a | n/a | n/a | ✗ | |
-| **Pocket ID** (`pocket-id-state`, fast) | ✗ | n/a | n/a | ✓ d14 w8 m6 | encryption key (tofu state) | n/a | ✗ | |
-| **OpenBao** (`data-openbao-0`, fast) | ✗ | n/a | n/a | ✗ | ✓ every value + seal key | n/a | ✗ | `bao operator raft snapshot`, by hand |
-| **Zot** (`zot-data`, bulk) | ✓ 24 hourly + 30 daily | n/a | n/a | ✗ | n/a | n/a | ✗ | rebuildable from source |
-| **Prometheus, Alertmanager, VictoriaLogs** (fast) | ✗ | n/a | n/a | ✗ | n/a | n/a | ✗ | history only, not kept |
-| **VPN VM** (160) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | n/a | n/a | ✗ | |
-| **Talos VM** (4010) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | machine secrets (tofu state) | ✓ by hand, no schedule | ✗ | |
-| **PBS VM** (162) | n/a | ✗ excluded | n/a | n/a | n/a | n/a | ✗ | rebuilt by hand |
-| **Cluster objects** | n/a | via the Talos VM | n/a | n/a | ✓ tofu state | ✓ by hand | ✗ | flux/ in git |
-| `slow/users/*/files` | ✗ drop share only | n/a | n/a | n/a | n/a | n/a | ✗ | personal files live in Nextcloud |
-| `slow/users/*/time-machine` | ✗ by design | n/a | n/a | n/a | n/a | n/a | ✗ | the Mac is the original |
-| `slow/garage` (every S3 backup) | ✓ 7 daily | n/a | n/a | n/a | n/a | n/a | ✗ | Garage metadata snapshot 6h |
-| `slow/ha-backups` | ✓ 14 daily | n/a | n/a | n/a | n/a | n/a | ✗ | |
-| `slow/node-exporter` | ✗ nothing to keep | n/a | n/a | n/a | n/a | n/a | n/a | |
-| `fast` pool itself | ✗ by design | n/a | n/a | the PVCs above | n/a | n/a | ✗ | |
-| TrueNAS config | ✗ | n/a | n/a | n/a | n/a | n/a | ✗ | none documented |
-| Proxmox host config (`/etc/pve`) | n/a | ✗ | n/a | n/a | API token | n/a | ✗ | rebuilt by machine-config + manual steps |
-| `vault.yml`, tofu state | n/a | n/a | n/a | n/a | ✓ full git history | n/a | GitHub | every clone |
-| `.vault-pass` | n/a | n/a | n/a | n/a | ✗ not committed | n/a | ✗ | not documented |
+| What | [ZFS](#zfs-snapshots) | [PBS](#pbs) | [HA own](#ha-backups) | [Secrets repo](#secrets-repo) | [etcd](#etcd-snapshots) | [Off-site](#off-site) | Other |
+|--|--|--|--|--|--|--|--|
+| **Vaultwarden** (`vaultwarden-data`, fast) | ✓ fast + replica | n/a | n/a | admin token hash | n/a | ✗ | clients' offline cache, items only |
+| **Memos** attachments (`slow/k8s-csi/memos`) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | |
+| **Memos** db (`memos-data`, fast) | ✓ fast + replica | n/a | n/a | n/a | n/a | ✗ | |
+| **Nextcloud** files (`slow/k8s-csi/nextcloud`) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | trash bin + versions in Nextcloud; synced clients |
+| **Nextcloud** db (CNPG `nextcloud-db-1`, fast) | ✓ fast + replica, crash-consistent | n/a | n/a | n/a | n/a | ✗ | |
+| **Nextcloud** html + config (`nextcloud-html`, fast) | ✓ fast + replica | n/a | n/a | admin password, OIDC client | n/a | ✗ | |
+| **Mealie** (`mealie-data`, fast) | ✓ fast + replica | n/a | n/a | n/a | n/a | ✗ | |
+| **DHS** postgres (external Hetzner box) | ✓ fast + replica, of the nightly dump | n/a | n/a | backup role password | n/a | ✗ | last dump on `postgres-dump` |
+| **Kassenbuch** (`kassenbuch-data`, bulk) | ✓ bulk | n/a | n/a | password hash | n/a | ✗ | |
+| **Supplement tracker** (bulk) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | |
+| **Glance** | n/a | n/a | n/a | n/a | n/a | n/a | stateless, config in git |
+| **Home Assistant** (VM 161) | n/a | ✓ last 3, d7 w4 m6 | ✓ schedule in the appliance | n/a | n/a | ✗ | |
+| **Pocket ID** (`pocket-id-state`, fast) | ✓ fast + replica | n/a | n/a | encryption key (tofu state) | n/a | ✗ | |
+| **OpenBao** (`data-openbao-0`, fast) | ✓ fast + replica | n/a | n/a | ✓ every value + seal key | n/a | ✗ | `bao operator raft snapshot`, by hand |
+| **Zot** (`zot-data`, bulk) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | rebuildable from source |
+| **Prometheus, Alertmanager, VictoriaLogs** (fast) | ✓ fast + replica | n/a | n/a | n/a | n/a | ✗ | history only |
+| **VPN VM** (160) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | n/a | ✗ | |
+| **Talos VM** (4010) | n/a | ✓ last 3, d7 w4 m6 | n/a | machine secrets (tofu state) | ✓ by hand, no schedule | ✗ | |
+| **PBS VM** (162) | n/a | ✗ excluded | n/a | n/a | n/a | ✗ | rebuilt by hand |
+| **Cluster objects** | n/a | via the Talos VM | n/a | ✓ tofu state | ✓ by hand | ✗ | flux/ in git |
+| `slow/users/*/files` | ✗ drop share only | n/a | n/a | n/a | n/a | ✗ | personal files live in Nextcloud |
+| `slow/users/*/time-machine` | ✗ by design | n/a | n/a | n/a | n/a | ✗ | the Mac is the original |
+| `slow/garage` (every S3 backup) | ✓ 7 daily | n/a | n/a | n/a | n/a | ✗ | Garage metadata snapshot 6h |
+| `slow/ha-backups` | ✓ 14 daily | n/a | n/a | n/a | n/a | ✗ | |
+| `slow/node-exporter` | ✗ nothing to keep | n/a | n/a | n/a | n/a | n/a | |
+| TrueNAS config | ✗ | n/a | n/a | n/a | n/a | ✗ | none documented |
+| Proxmox host config (`/etc/pve`) | n/a | ✗ | n/a | API token | n/a | ✗ | rebuilt by machine-config + manual steps |
+| `vault.yml`, tofu state | n/a | n/a | n/a | ✓ full git history | n/a | GitHub | every clone |
+| `.vault-pass` | n/a | n/a | n/a | ✗ not committed | n/a | ✗ | not documented |
+
+*fast + replica*: 24 hourly + 30 daily on `fast/k8s-csi/vols`, the same
+replicated to `slow/fast-replica`. *bulk*: 24 hourly + 30 daily on
+`slow/k8s-csi`. Both tasks fire at the same minute, so an app spanning both
+has restore points seconds apart.
 
 ## Scenario index
 
 | This broke | Go to |
 |--|--|
 | A file deleted or overwritten on a NAS share | [ZFS snapshots](#zfs-snapshots) |
-| A PVC deleted | `fast`: [VolSync](#volsync), if it has a `backup.yaml`, else rebuild. `bulk`: [ZFS snapshots](#zfs-snapshots) -- the driver deletes the directory, the snapshots still hold it for 30 days |
+| A PVC's data wrong, PVC still there | [ZFS snapshots](#zfs-snapshots), *Restore a `fast` PVC* / *a `bulk` PVC* |
+| A PVC deleted | [ZFS snapshots](#zfs-snapshots): `fast` from `slow/fast-replica` (the zvol's own snapshots go with it), `bulk` from `slow/k8s-csi` (the driver deletes the directory, the snapshots still hold it) |
 | A dead or broken VM | [PBS](#pbs). Home Assistant also: [its own backups](#ha-backups) |
 | Dead Proxmox node (titan, the only one) | [PBS](#pbs), *Dead node*: PBS first, then the VMs from it, then tofu |
 | One dead `fast` NVMe on the NAS | [TrueNAS, *Replacing a drive*](platform/truenas.md#replace-drive) |
-| Both `fast` NVMes dead | [VolSync](#volsync), *Lost `fast` pool* |
-| Lost cluster | [Recover from zero](recover-from-zero.md); the Talos VM from [PBS](#pbs), or rebuild and [VolSync](#volsync); [etcd](#etcd-snapshots) only if a snapshot exists |
+| Both `fast` NVMes dead | [ZFS snapshots](#zfs-snapshots), *Lost `fast` pool* |
+| Lost cluster | [Recover from zero](recover-from-zero.md); the Talos VM from [PBS](#pbs), or rebuild and restore each `fast` PVC from its old zvol ([ZFS snapshots](#zfs-snapshots)); [etcd](#etcd-snapshots) only if a snapshot exists |
 | Dead NAS | [Not covered](#not-covered) |
 | Lost laptop, or lost vault password | [Secrets repo](#secrets-repo) |
 
@@ -113,9 +119,7 @@ Why the gaps:
   which snapshots inherit; a NAS cron flips it to `false` hourly at `:05`
   (until then a PVC delete just waits -- `PersistentVolumeStuckReleased`).
   The same cron copies `lab:pvc` onto the replica, which TrueNAS cannot send
-  alongside re-encryption. The replica is what survives the `fast` pool and a
-  deleted PVC: the driver's delete takes the zvol's own snapshots with it.
-  VolSync still runs in parallel until the restore drill passes.
+  alongside re-encryption.
 - `users` -- `files` is only a drop share, personal files live in
   [Nextcloud](workloads/nextcloud.md). `time-machine` below it: a snapshot
   pins the bands TM deletes; it grows forever.
@@ -123,34 +127,130 @@ Why the gaps:
   Garage has no object lock: this is what survives a client deleting its own
   bucket.
 
+**`fast` and its replica.** A `fast` PVC is a zvol named after its PV
+(`pvc-<uuid>`), tagged `lab:pvc=<namespace>/<pvc>` at creation (see
+[Storage](storage.md#fast)). The driver's delete takes the zvol's own
+snapshots with it, so `slow/fast-replica` is what survives a deleted PVC and
+a lost `fast` pool. It is a non-raw send, re-encrypted under `slow`'s key:
+readable with only `slow` unlocked. Replication never restarts from scratch,
+so a rebuilt `fast` cannot wipe it. A replica outlives its PVC:
+retention only prunes datasets still on `fast`, so a deleted PVC's replica
+keeps its last snapshots indefinitely, restorable like any other. Remove it by hand once the app is gone for good (*Removing an app*).
+
+The copies are crash-consistent: SQLite and postgres recover from their
+journal/WAL like after a power cut. Anything that does not fsync can lose
+what was still in the page cache; the DHS dump is written aside, synced and
+renamed for that reason.
+
 **Credentials.** The NAS UI login; see [TrueNAS](platform/truenas.md).
 
 **Health check.** `NasSnapshotStale` covers `fast/k8s-csi/vols`,
-`slow/fast-replica` and `slow/k8s-csi` (see [Monitoring](monitoring.md#alerts));
-the rest only through TrueNAS's own alerts to Telegram (set up in the UI, not
-in this repo). In the UI, the task list shows the last run. Or in a NAS shell (UI *System* -> *Shell*):
+`slow/fast-replica` and `slow/k8s-csi`, `PersistentVolumeStuckReleased` a
+dead fixup cron (see [Monitoring](monitoring.md#alerts)); the rest only
+through TrueNAS's own alerts to Telegram (set up in the UI, not in this
+repo). In the UI, the task list shows the last run. Or in a NAS shell (UI
+*System* -> *Shell*):
 
 ```sh
 zfs list -t snapshot -o name,creation -s creation slow/k8s-csi | tail -3
+zfs list -t snapshot -o name,creation -s creation slow/fast-replica | tail -3
 ```
 
-**Restore.** Snapshots are browsable read-only under `.zfs/snapshot/` in the
-dataset's mountpoint. Copy out what you need:
+**Find a PVC's zvol.** On the NAS, by app -- a deleted PVC's old zvol is
+only on the replica, under its old uuid:
+
+```sh
+zfs list -H -o name,lab:pvc -r fast/k8s-csi/vols slow/fast-replica | grep '<ns>/<pvc>$'
+zfs list -t snapshot -o name,creation -s creation <zvol>
+```
+
+The live PVC's zvol is `fast/k8s-csi/vols/` plus
+`kubectl -n <ns> get pvc <pvc> -o jsonpath='{.spec.volumeName}'`.
+
+**Restore a `fast` PVC.** Clone the snapshot, `dd` it into the live zvol,
+destroy the clone. Never `zfs rollback`: it destroys every newer snapshot and
+breaks replication. The workload page gives the values for its app:
+
+```sh
+NS=vaultwarden KS=vaultwarden DEPLOY=vaultwarden PVC=vaultwarden-data
+```
+
+1. Stop the app so Flux does not scale it back up, which detaches the zvol.
+   Pocket ID's Kustomization is `infrastructure`, which suspends every
+   controller with it.
+   ```sh
+   flux suspend kustomization "$KS"
+   kubectl -n "$NS" scale deploy/"$DEPLOY" --replicas=0
+   ```
+   If the PVC is gone: resume instead, let Flux recreate it and the pod bind
+   it (`fast` provisions on first use), then suspend and scale to 0.
+2. On the NAS, with `<src>` the chosen snapshot (on `fast`, or on
+   `slow/fast-replica` for a deleted PVC or a lost pool), the clone in the
+   same pool as `<src>`, and `<target>` the live PVC's zvol. The target must be
+   at least the snapshot's size:
+   ```sh
+   zfs clone <src>@<snap> <pool>/restore-tmp
+   ls -l /dev/zvol/<pool>/restore-tmp          # appears after a second or two
+   dd if=/dev/zvol/<pool>/restore-tmp of=/dev/zvol/<target> bs=1M conv=fsync
+   zfs destroy <pool>/restore-tmp
+   ```
+   A forgotten clone pins its origin and blocks that zvol's delete with
+   "dependent clones".
+3. Start the app:
+   ```sh
+   flux resume kustomization "$KS"
+   ```
+
+**Restore a `bulk` PVC.** Snapshots are browsable read-only under
+`.zfs/snapshot/` in the dataset's mountpoint. A `bulk` PVC is a directory
+under `slow/k8s-csi` (`pvc-<uuid>`, or a static one like `nextcloud/`); a
+recreated PVC gets a new directory. Scale the app to 0, then on the NAS:
 
 ```sh
 ls /mnt/slow/k8s-csi/.zfs/snapshot/
+# one file or path
 cp -a /mnt/slow/k8s-csi/.zfs/snapshot/<snap>/<dir>/<path> /mnt/slow/k8s-csi/<dir>/<path>
+# the whole PVC -- both trailing slashes; --delete drops what the snapshot lacks
+rsync -a --delete /mnt/slow/k8s-csi/.zfs/snapshot/<snap>/<old-dir>/ /mnt/slow/k8s-csi/<dir>/
 ```
-
-A `bulk` PVC is a directory under `slow/k8s-csi` (`pvc-<uuid>`, or a
-static one like `nextcloud/`). Scale the app to 0 first, copy back, scale up. A recreated PVC
-gets a new directory -- copy into that one.
 
 Rolling a whole dataset back (`zfs rollback -r`) destroys every newer
 snapshot. On `slow/garage` it also rolls back every bucket: for one bucket,
 `zfs clone` the snapshot and copy out instead.
 
-**Last verified:** never.
+**Lost `fast` pool.** Replace the NVMes and recreate the pool per
+[machines/truenas.md](build/machines/truenas.md#creating-pools), and the
+snapshot task, but not the replication task yet -- see
+[machines/truenas.md](build/machines/truenas.md#fast-snapshots). Every `fast`
+PV now points at nothing: delete the PVCs, let Flux recreate them empty,
+then restore each from `slow/fast-replica` as above, matching by `lab:pvc`.
+OpenBao can instead be re-initialised per
+[platform/README.md](build/platform/README.md#first-install) and refilled by
+`mise run platform apply`. Then move the old replica aside
+(`zfs rename slow/fast-replica slow/fast-replica-old`) -- the new `fast`
+shares no snapshot with it -- recreate the replication task, and destroy
+`-old` once the new replica has run.
+
+**Removing an app.** Its zvols on `fast` go with its PVCs; their replicas
+stay, on purpose -- they are the undo for a deleted PVC. Once the app is gone
+for good:
+
+```sh
+zfs list -H -o name,lab:pvc -r slow/fast-replica | grep '<ns>/'
+zfs destroy -r slow/fast-replica/pvc-<uuid>
+```
+
+**Drill.** In a throwaway `drill` namespace, one 1Gi `fast` and one `bulk`
+PVC with 10 MiB plus its `sha256` each: wait for a snapshot, replication and
+the fixup; overwrite and restore in place; delete the PVCs (the PVs must go
+without help); recreate them and restore from `slow/fast-replica` and
+`.zfs/snapshot`; `sha256sum -c`. Afterwards delete the namespace and the
+replicas as in *Removing an app*.
+
+**Last verified:** 2026-11-14, the drill above (mechanism only, no real app).
+The fast and bulk snapshots of one run had the same creation second. DHS's
+dump: 2026-10-27, restored into a throwaway postgres (12 tables, clean) --
+not onto the box.
 
 ## PBS on Garage {#pbs}
 
@@ -253,191 +353,6 @@ App specifics: [Home Assistant](workloads/home-assistant.md).
 
 **Last verified:** never.
 
-## VolSync on Garage {#volsync}
-
-**How it works.** restic, nightly, for the `fast` PVCs that cannot be rebuilt.
-`fast` has no ZFS snapshots, and the mirror does not help against a deleted
-zvol -- `kubectl delete pvc` included. Each PVC gets a `backup.yaml` beside it: an
-`ExternalSecret` with the restic repository and keys, and a
-`ReplicationSource`. Wiring: [volsync.md](build/flux/docs/volsync.md).
-
-| PVC | Namespace | Schedule (UTC) | Defined in (apps repo) | Mover uid |
-|--|--|--|--|--|
-| `vaultwarden-data` | `vaultwarden` | `00:15` | `apps/vaultwarden/backup.yaml` | 1000 |
-| `pocket-id-state` | `pocket-id` | `00:45` | `infrastructure/configs/pocket-id/backup.yaml` | 1000 |
-| `postgres-dump` | `dhs` | `01:00` | `apps/dhs/backup.yaml` | 70 |
-| `memos-data` | `memos` | `01:15` | `apps/memos/backup.yaml` | 1000 |
-| `mealie-data` | `mealie` | `01:30` | `apps/mealie/backup.yaml` | 1000 |
-| `db-dump` | `nextcloud` | `01:45` | `apps/nextcloud/backup.yaml` | 26 |
-| `nextcloud-html` | `nextcloud` | `02:00` | `apps/nextcloud/backup.yaml` | 33 |
-
-`postgres-dump` holds a `pg_dump -Fc` of the DHS box, written by a CronJob at
-`00:30` (`apps/dhs/dump.yaml`) and alerted on by `DhsDumpStale` -- see
-[DHS](workloads/dhs.md). Nextcloud's `db-dump` is the same, of its CNPG
-database at `01:15` (`apps/nextcloud/dump.yaml`), alerted on by
-`NextcloudDumpStale` -- see [Nextcloud](workloads/nextcloud.md).
-
-Deliberately not backed up: OpenBao (tofu rebuilds its contents), Prometheus,
-Alertmanager and VictoriaLogs (history only), and `bulk` (on the mirror, under ZFS
-snapshots). A new `fast` PVC that cannot be rebuilt gets a `backup.yaml`.
-
-A run: the controller clones the PVC, runs restic `backup` then `forget` in
-a Job in the app's namespace, and deletes the clone and the Job. The
-repository is initialised on the first run; the first run starts at creation,
-not at the schedule.
-
-Resource diagram and why `Clone`, not `Snapshot`:
-[volsync.md](build/flux/docs/volsync.md).
-
-The copy is crash-consistent. SQLite fsyncs its commits, the DHS dump is
-written aside, synced and renamed. Anything that does not fsync can lose what
-was still in the page cache -- the drill caught a freshly written file going
-in as 0 bytes.
-
-**Schedule / retention.** Daily per the table. `retain: daily 14, weekly 8,
-monthly 6`; `prune` every 7 days. Bucket `k8s-backups`, quota 50G.
-
-**Credentials.** One Garage key (`volsync`) and one restic password for every
-repository: `garage_volsync_key_id`, `garage_volsync_secret_key`,
-`volsync_restic_password` in `secrets/vault.yml`, written by
-`platform_secrets.tf` to `kv/volsync/restic`.
-
-- **Losing the restic password makes every backup unreadable.**
-- Anything that can read one app's restic Secret can delete every app's
-  backups. The 7-day ZFS snapshot on `slow/garage` is what survives that.
-
-**Health check.**
-
-```sh
-kubectl get replicationsource -A        # every LAST SYNC within a day
-kubectl -n <ns> get replicationsource <pvc> -o jsonpath='{.status.latestMoverStatus.logs}'
-mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups/   # well under 50G
-```
-
-**Manual run** (e.g. before NAS maintenance). A new `trigger.manual` value
-starts a run; **while it is set the schedule is ignored**, so remove it after.
-
-```sh
-SRCS="vaultwarden/vaultwarden-data pocket-id/pocket-id-state memos/memos-data mealie/mealie-data dhs/postgres-dump nextcloud/db-dump nextcloud/nextcloud-html"
-for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type merge \
-  -p '{"spec":{"trigger":{"manual":"run-'"$(date +%F)"'"}}}'; done
-kubectl get replicationsource -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,LAST_SYNC:.status.lastSyncTime,LAST_MANUAL:.status.lastManualSync,RESULT:.status.latestMoverStatus.result
-# every LAST_MANUAL = run-<today>, then:
-for s in $SRCS; do kubectl -n "${s%/*}" patch replicationsource "${s#*/}" --type json \
-  -p '[{"op":"remove","path":"/spec/trigger/manual"}]'; done
-```
-
-Alerts (warning, to Telegram -- see [Monitoring](monitoring.md)):
-`VolSyncBackupFailing` (a source out of sync for 1h) and
-`VolSyncMetricsAbsent` (no sync status at all: controller or scrape dead).
-
-**Restore.** Into the app's PVC with `copyMethod: Direct` -- overwritten in
-place. Never through a volume populator: that restores
-via a VolumeSnapshot and fails like `Snapshot` above. The workload page gives
-the values for its app:
-
-```sh
-NS=vaultwarden KS=vaultwarden DEPLOY=vaultwarden PVC=vaultwarden-data MOVER_UID=1000
-```
-
-1. Stop the app so Flux does not scale it back up. Pocket ID's Kustomization
-   is `infrastructure`, which suspends every controller with it.
-   ```sh
-   flux suspend kustomization "$KS"
-   kubectl -n "$NS" scale deploy/"$DEPLOY" --replicas=0
-   ```
-2. If the PVC is gone, create it empty first: `kubectl apply -f` the app's
-   `storage.yaml` from `flux/`. Then:
-   ```sh
-   kubectl apply -f - <<EOF
-   apiVersion: volsync.backube/v1alpha1
-   kind: ReplicationDestination
-   metadata:
-     name: $PVC
-     namespace: $NS
-   spec:
-     trigger: { manual: restore-1 }
-     restic:
-       repository: $PVC-restic
-       copyMethod: Direct
-       destinationPVC: $PVC
-       # restoreAsOf: "2026-10-30T00:00:00Z"   # older than the latest
-       moverSecurityContext:
-         runAsNonRoot: true
-         runAsUser: $MOVER_UID
-         runAsGroup: $MOVER_UID
-         fsGroup: $MOVER_UID
-         seccompProfile: { type: RuntimeDefault }
-   EOF
-   ```
-3. Wait until it reports `restore-1`, then read the mover's log:
-   ```sh
-   kubectl -n "$NS" get replicationdestination "$PVC" -o jsonpath='{.status.lastManualSync}'
-   kubectl -n "$NS" get replicationdestination "$PVC" -o jsonpath='{.status.latestMoverStatus}'
-   ```
-4. Clean up (its cache PVC goes with it) and start the app:
-   ```sh
-   kubectl -n "$NS" delete replicationdestination "$PVC"
-   flux resume kustomization "$KS"
-   ```
-
-> [!WARNING]
-> **A new ReplicationSource backs up at once**, not at its first schedule
-> tick: VolSync starts a sync whenever `status.lastSyncTime` is unset,
-> whatever the trigger. On a rebuilt cluster that is the fresh, empty PVC,
-> which becomes restic's `latest` -- restore with `restoreAsOf` older than
-> the rebuild. See [Recover from zero](recover-from-zero.md#stage-7-and-8-on-a-fresh-cluster).
-> An existing ReplicationSource over a recreated empty PVC waits for its
-> schedule: restore before then.
-
-**Without the cluster.** Each repository is plain restic. From the repo root,
-on Trusted or the tailnet (restic is not pinned in `mise.toml`):
-
-```sh
-. scripts/lib.sh
-export RESTIC_REPOSITORY="s3:https://s3.<lab_domain>:3900/k8s-backups/$NS/$PVC"
-export RESTIC_PASSWORD="$(vault_require secrets/vault.yml volsync_restic_password)"
-export AWS_ACCESS_KEY_ID="$(vault_require secrets/vault.yml garage_volsync_key_id)"
-export AWS_SECRET_ACCESS_KEY="$(vault_require secrets/vault.yml garage_volsync_secret_key)"
-export AWS_DEFAULT_REGION=lab
-restic snapshots
-restic restore latest --target ./restore
-```
-
-**Lost `fast` pool.** Replace the NVMes and recreate the pool per
-[machines/truenas.md](build/machines/truenas.md#creating-pools). Every `fast`
-PV now points at nothing: delete the PVCs, let Flux recreate them empty, then
-restore each row of the table above. OpenBao is re-initialised per
-[platform/README.md](build/platform/README.md#first-install) and refilled by
-`mise run platform apply`. Prometheus history is gone.
-
-**Removing an app.** Its ReplicationSource goes with it; the repository
-stays, on purpose -- it is the undo for a deleted PVC. Once the app is gone
-for good:
-
-```sh
-mise run s3 volsync rm --recursive --dryrun s3://k8s-backups/<ns>/<pvc>/
-mise run s3 volsync rm --recursive s3://k8s-backups/<ns>/<pvc>/
-```
-
-**Gotchas.**
-
-- Changing `copyMethod` mid-run leaves the old run's Job, `volsync-*-src`
-  PVC and VolumeSnapshot behind, and the next run reuses them. Delete all
-  three; VolSync recreates what it needs.
-- The cache PVC (`volsync-src-<pvc>-cache`) lives as long as the
-  ReplicationSource. It is not data.
-
-**Drill.** In a throwaway `volsync-drill` namespace: write 10 MiB plus its
-`sha256` into a `fast` PVC, `sync`, back it up with `trigger.manual`
-(repository `k8s-backups/volsync-drill/drill-data`), delete the PVC, restore
-with `Direct` into a new empty PVC, `sha256sum -c`. Afterwards delete the
-namespace and the `s3://k8s-backups/volsync-drill/` prefix as above.
-
-**Last verified:** 2026-10-20, the drill above at rollout (mechanism only, no
-real app). DHS's dump: 2026-10-27, restored from restic into a throwaway
-postgres (12 tables, clean) -- not onto the box.
-
 ## Secrets repo {#secrets-repo}
 
 **How it works.** `secrets/` is a submodule backed by the private GitHub repo
@@ -490,7 +405,7 @@ mise run cluster plan    # proves vault + state decrypt
 **How it works.** By hand, before a Talos or Kubernetes upgrade (see
 [Maintenance](maintenance.md)). The file lands wherever you ran the command.
 Not scheduled, not kept anywhere in particular. The cluster is mostly
-rebuildable without it: tofu state + the apps repo + VolSync.
+rebuildable without it: tofu state + the apps repo + the NAS snapshots.
 
 ```sh
 talosctl -n talos-cp-1.<lab_domain> etcd snapshot ./etcd-$(date +%F).snapshot
@@ -535,13 +450,11 @@ Not routes you plan around, but they exist:
 ## Not covered {#not-covered}
 
 - **The NAS.** Fire, theft, both HDDs, or a corrupt `slow` pool takes the
-  `bulk` data, the user files, Garage (all PBS and VolSync backups), the HA
-  backups and every snapshot. Until [off-site](#off-site) exists.
+  `bulk` data, the `fast` replica, the user files, Garage (all PBS backups),
+  the HA backups and every snapshot. Until [off-site](#off-site) exists.
 - **A compromised NAS admin or Garage key.** Garage has no object lock;
   snapshots can be destroyed by the same admin. The 7-day `slow/garage`
   snapshot covers only a client deleting its own bucket.
-- **`fast` PVCs without a `backup.yaml`**: OpenBao (refilled by tofu),
-  Prometheus and Alertmanager (history lost).
 - **The PBS VM's configuration** -- datastore, jobs, users, Pocket ID realm.
   Rebuilt by hand from [guests/README.md](build/guests/README.md#backups).
 - **Proxmox host configuration** (`/etc/pve`: backup job, storage entries,
@@ -555,8 +468,8 @@ Not routes you plan around, but they exist:
 - **The DHS box** beyond its database: compose files, tailscale state.
 - **`.vault-pass`** -- not committed; its second copy is in the password
   managers.
-- **Failures outside Prometheus.** Only VolSync and the DHS dump alert from
-  Prometheus. A failed PBS job or ZFS task reaches Telegram only through
+- **Failures outside Prometheus.** Only the `fast`/`bulk` snapshots, their
+  replica and the DHS dump alert from Prometheus. A failed PBS job or ZFS task reaches Telegram only through
   PVE's / PBS's / TrueNAS's own notifications (set up in the UI, not in this
   repo); a failed HA backup is seen only by looking. SMART tests are not set up,
   so a dying HDD in the mirror shows up only in a scrub.

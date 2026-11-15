@@ -431,4 +431,3 @@ reads; k8s consumers get it via platform at `kv/<ns>/<app>/s3`.
 | Bucket | Quota | Consumer |
 |--------|-------|----------|
 | `proxmox-backups` | 300G | PBS datastore, see [PBS](../docs/src/backups.md#pbs) |
-| `k8s-backups`     | 50G  | VolSync, restic per PVC, see [VolSync](../docs/src/backups.md#volsync) |

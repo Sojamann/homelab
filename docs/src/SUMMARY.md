@@ -60,5 +60,4 @@
   - [Supplement tracker](build/flux/docs/supplement-tracker.md)
   - [Tailscale](build/flux/docs/tailscale.md)
   - [Vaultwarden](build/flux/docs/vaultwarden.md)
-  - [VolSync](build/flux/docs/volsync.md)
   - [Zot](build/flux/docs/zot.md)

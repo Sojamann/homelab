@@ -56,7 +56,7 @@ Build: [Build guide: Cluster](../build/cluster/README.md).
 | [PBS](../backups.md#pbs) | the whole VM, nightly |
 | [etcd snapshots](../backups.md#etcd-snapshots) | etcd, by hand, before upgrades |
 | [Secrets repo](../backups.md#secrets-repo) | machine secrets, in tofu state |
-| apps repo + [VolSync](../backups.md#volsync) | everything else, rebuilt |
+| apps repo + [ZFS snapshots](../backups.md#zfs-snapshots) | everything else, rebuilt; PVC data on the NAS |
 
 A VM restored from PBS rolls etcd back to 23:00 of that day -- see the
 caveat in [Backups: PBS](../backups.md#pbs). A lost cluster:

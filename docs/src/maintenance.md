@@ -57,7 +57,7 @@ site via `.github/workflows/docs.yml`; a broken link fails it.
 
 Not covered by Renovate: TrueNAS itself, OS packages on Proxmox, PBS and the
 routers ([`mise run update`](#patches)), Home Assistant (updates itself from
-its UI), and `restic`, which is not pinned at all.
+its UI).
 
 ## Checklist
 
@@ -74,16 +74,14 @@ its UI), and `restic`, which is not pinned at all.
 
 ### Backups {#backups}
 
-- VolSync: `kubectl get replicationsource -A` -- every LAST SYNC within a
-  day; the `VolSyncBackupFailing` alert is the same check, pushed
-- Garage: `k8s-backups` well under its 50G quota
-  (`mise run s3 volsync ls --summarize --human-readable --recursive s3://k8s-backups/`)
+- `fast` snapshots and replica: `NasSnapshotStale` is the check, pushed; by
+  hand see [ZFS snapshots](backups.md#zfs-snapshots), *Health check*
 - PBS: PBS -> *Datastore* -> `proxmox-backups` -> *Content*: last snapshot per
   VM from last night, verify state OK. Nothing alerts on a failed job.
 - Home Assistant: *Settings* -> *System* -> *Backups* shows a recent one.
 - `git -C secrets status -sb` -- nothing "ahead" (not pushed is not backed up)
-- after removing an app for good, delete its `k8s-backups/<ns>/<pvc>/` prefix
-  -- see [VolSync, *Removing an app*](backups.md#volsync)
+- after removing an app for good, destroy its replicas on `slow/fast-replica`
+  -- see [ZFS snapshots, *Removing an app*](backups.md#zfs-snapshots)
 
 ### Proxmox {#proxmox}
 
@@ -106,13 +104,12 @@ and check the expiry in a browser on the Proxmox, PBS and TrueNAS UIs. See
 Once a year, actually restore something per route and update its **Last
 verified** date on [Backups & restore](backups.md):
 
-- [ZFS snapshots](backups.md#zfs-snapshots) -- copy a file back out of
-  `.zfs/snapshot`
+- [ZFS snapshots](backups.md#zfs-snapshots) -- the drill in a throwaway
+  namespace (`fast` and `bulk`, in place and from the replica), or one real
+  app into a scratch PVC
 - [PBS](backups.md#pbs) -- restore a VM to a spare id, boot it, delete it
 - [Home Assistant's own backups](backups.md#ha-backups) -- the key still
   decrypts the newest one
-- [VolSync](backups.md#volsync) -- the drill in a throwaway namespace, or one
-  real app into a scratch PVC
 - [Secrets repo](backups.md#secrets-repo) -- a fresh clone with only
   `.vault-pass` gets to `mise run cluster plan`
 - [etcd snapshots](backups.md#etcd-snapshots) -- at least that one can be
@@ -251,9 +248,8 @@ talosctl -n "$NODE" health
   [Talos / Kubernetes](platform/talos.md).
 - **DHS's `pg_dump` image** tracks the DHS server's postgres major. Bump both
   together -- see [DHS](workloads/dhs.md).
-- **Nextcloud's `pg_dump` image** is the CNPG image of its `Cluster`; Renovate
-  bumps both in one PR. A Postgres major is an in-place CNPG upgrade -- see
-  [Nextcloud](workloads/nextcloud.md#admin).
+- **Nextcloud's Postgres** is the CNPG image of its `Cluster`. A major is an
+  in-place CNPG upgrade -- see [Nextcloud](workloads/nextcloud.md#admin).
 - **App images with migrations** (Vaultwarden, Pocket ID, ...) are not undone
   by reverting the tag; the way back is a restore. Check the app's page before
   merging a major.

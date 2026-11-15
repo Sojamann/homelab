@@ -36,13 +36,14 @@ its only backup; without it the database is unreadable.
 
 ## Backup & restore
 
-[VolSync](../backups.md#volsync), nightly `00:45` UTC, retain daily 14,
-weekly 8, monthly 6. The key: [Secrets repo](../backups.md#secrets-repo).
+[ZFS snapshots](../backups.md#zfs-snapshots) of its zvol, 24 hourly + 30
+daily, replicated to `slow/fast-replica`. The key: [Secrets
+repo](../backups.md#secrets-repo).
 
-**Restore.** The generic [VolSync restore](../backups.md#volsync), with:
+**Restore.** The generic [`fast` restore](../backups.md#zfs-snapshots), with:
 
 ```sh
-NS=pocket-id KS=infrastructure DEPLOY=pocket-id PVC=pocket-id-state MOVER_UID=1000
+NS=pocket-id KS=infrastructure DEPLOY=pocket-id PVC=pocket-id-state
 ```
 
 Suspending `infrastructure` suspends every controller in that tier for the
@@ -99,9 +100,6 @@ TrueNAS and Vaultwarden do not use it.
   `https://login.<app_domain>`; changing it orphans every one.
 - **One pod, `Recreate`** -- SQLite, RWO. A rollout is seconds of downtime.
 - **`TRUST_PROXY=true`** only affects the client IP in the audit log.
-- **The backup lives in `configs/`, not beside the app**: the app is in the
-  same tier as the VolSync chart, and a CR cannot be applied in the same pass
-  as the chart that defines its kind.
 
 ## What breaks without it
 

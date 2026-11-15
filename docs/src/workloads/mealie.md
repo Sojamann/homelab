@@ -50,21 +50,21 @@ Wiring: [Build guide: Mealie](../build/flux/docs/mealie.md).
 | `mealie-data` -> `/app/data` | `mealie.db` (SQLite): recipes, users, households, meal plans, lists; `recipes/` images; `.secret` + `.session_secret` (token signing) | `fast`, 5Gi | **yes** |
 
 Losing the two secret files only logs everyone out. `backups/` holds Mealie's
-own zips -- none are scheduled; a manual one is swept into restic with the
-rest, so delete it when done.
+own zips -- none are scheduled; a manual one stays in the snapshots for 30
+days, so delete it when done.
 
 Not state: the Pocket ID client (OpenBao) and the settings (env in
 `apps/mealie/server.yaml`).
 
 ## Backup & restore
 
-- **Everything:** [VolSync](../backups.md#volsync), nightly `01:30` UTC,
-  retain daily 14, weekly 8, monthly 6.
+- **Everything:** [ZFS snapshots](../backups.md#zfs-snapshots) of its zvol,
+  24 hourly + 30 daily, replicated to `slow/fast-replica`.
 
-**Restore.** The generic [VolSync restore](../backups.md#volsync), with:
+**Restore.** The generic [`fast` restore](../backups.md#zfs-snapshots), with:
 
 ```sh
-NS=mealie KS=mealie DEPLOY=mealie PVC=mealie-data MOVER_UID=1000
+NS=mealie KS=mealie DEPLOY=mealie PVC=mealie-data
 ```
 
 **Verify.**
@@ -105,7 +105,7 @@ notes for a major.
 - **AI features** (import from a photo, ingredient parsing through an
   OpenAI-compatible API). They would need a key in OpenBao and send recipes
   out. Adding it: a property in `kv/mealie/app` and `OPENAI_*` env.
-- **Mealie's own backups.** Not scheduled upstream; VolSync covers the volume.
+- **Mealie's own backups.** Not scheduled upstream; the snapshots cover the volume.
 
 ## Gotchas
 

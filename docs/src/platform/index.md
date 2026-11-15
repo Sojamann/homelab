@@ -23,7 +23,6 @@ Covered inside a topic, no page of their own:
 | cert-manager, the Gateway (front door), Tailscale operator | [Networking](../networking.md) |
 | democratic-csi, csi-driver-nfs, snapshot-controller | [Storage](../storage.md) |
 | kube-prometheus-stack | [Monitoring & alerting](../monitoring.md) |
-| VolSync | [Backups & restore](../backups.md#volsync) |
 
 ```mermaid
 graph BT

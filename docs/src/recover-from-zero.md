@@ -42,7 +42,7 @@ graph TD
   S4 --> S5["5 PBS VM only, re-attach Garage datastore"]
   S5 --> S6["6 restore VMs from PBS<br/>vpn, Home Assistant, Talos"]
   S6 --> S7["7 cluster + platform<br/>only if Talos was not restored"]
-  S7 --> S8["8 Flux reconciles, then VolSync restores"]
+  S7 --> S8["8 Flux reconciles, then fast PVCs from the old zvols"]
   S8 --> S9["9 done-checks"]
 ```
 
@@ -56,7 +56,7 @@ graph TD
 | 5 | **PBS** | `mise run guests apply -target=proxmox_virtual_environment_vm.pbs` **only**, install PBS, re-add the Garage endpoint and datastore on the existing bucket | [PBS, *Dead node*](backups.md#pbs) |
 | 6 | **VMs from PBS** | restore 160 (vpn), 161 (Home Assistant), 4010 (Talos) under their own ids; then `mise run guests plan` -- close to a no-op | [PBS](backups.md#pbs). Home Assistant: if its PBS copy is bad, a fresh VM + [its own backups](backups.md#ha-backups) |
 | 7 | **Cluster + platform** | Talos VM restored: skip to 8. Else `mise run guests apply`, `mise run cluster apply`, then the OpenBao two-step from [Build guide: Platform, *First install*](build/platform/README.md#first-install) and `mise run platform apply` | [etcd](backups.md#etcd-snapshots), only if a snapshot exists, *before* the cluster layer bootstraps etcd |
-| 8 | **Flux** | the platform layer installs Flux; it reconciles `infrastructure`, `infrastructure-configs`, `apps` in that order -- `flux get kustomizations` | [VolSync](backups.md#volsync), per PVC, once Flux is Ready -- see below |
+| 8 | **Flux** | the platform layer installs Flux; it reconciles `infrastructure`, `infrastructure-configs`, `apps` in that order -- `flux get kustomizations` | `fast` PVCs from their old zvols, once Flux is Ready -- see below |
 | 9 | **Done-checks** | below | -- |
 
 Why this order:
@@ -66,9 +66,8 @@ Why this order:
 - **The NAS before Proxmox** -- PBS's datastore and every PVC are on it.
 - **Home Assistant from PBS, not its own backups**, when PBS has it: the VM
   comes back whole. Its own backups are for a fresh or broken instance.
-- **VolSync after Flux has reconciled** -- the restore writes into the PVC
-  Flux creates, needs the ExternalSecret with the restic credentials (OpenBao
-  must be filled, stage 7), and the VolSync controller (`infrastructure`).
+- **`fast` restores after Flux has reconciled** -- each writes into the zvol
+  of the PVC Flux creates.
 - **The Talos VM from PBS** brings etcd back as of 23:00 that day, with every
   PVC still on the NAS. Usually the faster path; see the caveat on
   [PBS](backups.md#pbs).
@@ -82,8 +81,13 @@ Only when the Talos VM could not be restored.
 managers, then `mise run platform apply` refills every value from the vault and
 state. Commit with `mise run save`. See [OpenBao](platform/openbao.md).
 
-**`fast` PVCs** come up empty. Restore each one that has a backup with the
-generic [VolSync restore](backups.md#volsync), values from its page:
+**`fast` PVCs** come up empty, as new zvols. The old ones are still on the
+NAS under their old uuids, with the same `lab:pvc` -- or, with `fast` lost
+too, on `slow/fast-replica`. Restore each with the generic
+[`fast` restore](backups.md#zfs-snapshots), values from its page; the source
+is the old zvol's newest snapshot (`zfs list -o name,lab:pvc,creation -s
+creation -r fast/k8s-csi/vols slow/fast-replica` shows old and new side by
+side):
 
 | Order | PVC | Page | Note |
 |--|--|--|--|
@@ -91,29 +95,26 @@ generic [VolSync restore](backups.md#volsync), values from its page:
 | 2 | `vaultwarden-data` | [Vaultwarden](workloads/vaultwarden.md) | |
 | 3 | `memos-data` | [Memos](workloads/memos.md) | the notes |
 | 4 | `mealie-data` | [Mealie](workloads/mealie.md) | the recipes |
-| 5 | `nextcloud-html`, then the db from `db-dump` | [Nextcloud](workloads/nextcloud.md#backup--restore) | config.php's secret; then the files rescan |
-| -- | `postgres-dump` | [DHS](workloads/dhs.md) | nothing to restore: it is a staging copy, the history stays in restic |
+| 5 | `nextcloud-html`, `nextcloud-db-1` | [Nextcloud](workloads/nextcloud.md#backup--restore) | config.php's secret; then the files rescan |
+| -- | `postgres-dump` | [DHS](workloads/dhs.md) | nothing to restore: a staging copy, its history stays in the old zvol's snapshots |
 
-**Restore as of before the rebuild.** Flux creates each ReplicationSource
-with the app, and its first run starts at creation -- it backs up the new,
-empty PVC, which becomes restic's `latest`. Set `restoreAsOf` in the
-ReplicationDestination to a time before the lab went down, or check with
-`restic snapshots` ([without the cluster](backups.md#volsync)) which
-snapshot is the real one. Do the restores as soon as Flux is Ready, before
-anyone uses the fresh apps.
+Do the restores as soon as Flux is Ready, before anyone uses the fresh apps.
+Once every app checks out, destroy the old zvols (`zfs destroy -r`) -- their
+replicas stay until removed as in
+[ZFS snapshots, *Removing an app*](backups.md#zfs-snapshots).
 
 **`bulk` PVCs** (Kassenbuch, Supplement tracker, Zot) are recreated as new,
 empty `pvc-<uuid>` directories under `slow/k8s-csi`. The old directories are
 still there: scale the app to 0, copy the old directory's contents into the
 new one on the NAS, scale up -- as in
-[ZFS snapshots, *Restore*](backups.md#zfs-snapshots) with the live directory
-as source. Zot can instead be refilled by pushing the images again.
+[ZFS snapshots, *Restore a `bulk` PVC*](backups.md#zfs-snapshots) with the
+old directory as source. Zot can instead be refilled by pushing the images again.
 Memos' attachments and Nextcloud's files are static PVs onto
 `slow/k8s-csi/memos` and `slow/k8s-csi/nextcloud` and need nothing.
 
 **Not restored, rebuilt:** Prometheus, Alertmanager and VictoriaLogs history (gone),
 Grafana (stateless), Glance (stateless), OpenBao (from tofu), the CloudNativePG
-operator (from git; Nextcloud's database is restored from its dump, above).
+operator (from git; Nextcloud's database comes back with its zvol, above).
 
 ## How to tell you're done
 

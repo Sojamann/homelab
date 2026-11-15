@@ -39,7 +39,7 @@ and the manifests.
 ## Backup & restore
 
 Covered by [ZFS snapshots](../backups.md#zfs-snapshots) on `slow/k8s-csi`:
-24 hourly + 30 daily. Not by VolSync. A ZFS snapshot is atomic, so db and
+24 hourly + 30 daily. A ZFS snapshot is atomic, so db and
 `-wal` are caught together.
 
 **Restore.** The generic [ZFS restore](../backups.md#zfs-snapshots) of a

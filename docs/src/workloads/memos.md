@@ -47,20 +47,20 @@ instance settings (`instance.json`, git).
 
 ## Backup & restore
 
-- **Notes (db):** [VolSync](../backups.md#volsync), nightly `01:15` UTC,
-  retain daily 14, weekly 8, monthly 6.
+- **Notes (db):** [ZFS snapshots](../backups.md#zfs-snapshots) of its zvol,
+  24 hourly + 30 daily, replicated to `slow/fast-replica`.
 - **Attachments:** [ZFS snapshots](../backups.md#zfs-snapshots) on
-  `slow/k8s-csi`, 24 hourly + 30 daily. Not in VolSync.
+  `slow/k8s-csi`, same schedule, same minute: db and attachments restore to
+  points seconds apart.
 
 **Restore.**
 
-- **The db:** the generic [VolSync restore](../backups.md#volsync), with:
+- **The db:** the generic [`fast` restore](../backups.md#zfs-snapshots), with:
   ```sh
-  NS=memos KS=memos DEPLOY=memos PVC=memos-data MOVER_UID=1000
+  NS=memos KS=memos DEPLOY=memos PVC=memos-data
   ```
-- **Attachments:** the NAS snapshots,
-  `.zfs/snapshot/<name>/memos/` under `/mnt/slow/k8s-csi`. Scale to 0, copy
-  back, scale up.
+- **Attachments:** the generic [`bulk` restore](../backups.md#zfs-snapshots)
+  of `memos/`, from the same snapshot name as the db.
 
 **Verify.**
 

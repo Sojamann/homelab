@@ -36,7 +36,7 @@ mise run guests plan
 mise run cluster plan
 mise run platform plan
 mise run save "<msg>"     # commit secrets/ (state) and this repo together
-mise run s3 volsync ls s3://k8s-backups/   # aws s3 against Garage, key from the vault
+mise run s3 pbs ls s3://proxmox-backups/   # aws s3 against Garage, key from the vault
 ```
 
 Updates arrive as Renovate PRs, see
