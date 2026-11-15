@@ -199,23 +199,6 @@ zpool list
 zfs list -o name,used,avail,refer -r slow -d 2
 ```
 
-## What breaks without it
-
-- **NAS down** -- every PVC: `fast` pods lose their disk (IO errors,
-  read-only remounts), `bulk` pods block on `hard` NFS until it is back.
-  OpenBao, Pocket ID and Prometheus are on `fast`, so it is effectively the
-  whole cluster. VM disks are on `local` and keep running, but PBS has no
-  datastore.
-- **One `fast` NVMe dead** -- nothing visible; the mirror runs degraded
-  until the drive is [replaced](platform/truenas.md#replace-drive).
-- **Both `fast` NVMes dead** -- every `fast` PVC gone; see
-  [ZFS snapshots, *Lost `fast` pool*](backups.md#zfs-snapshots).
-- **democratic-csi down** -- running pods keep their volumes; new `fast` PVCs
-  stay `Pending`, deletes hang. Same for csi-driver-nfs and `bulk`.
-- **snapshot-controller down** -- no new VolumeSnapshots; the NAS's own
-  snapshots are unaffected.
-- **TrueNAS API key expired or revoked** -- same as democratic-csi down.
-
 ## Gotchas
 
 - **`reclaimPolicy: Delete` on both classes.** `kubectl delete pvc` destroys a

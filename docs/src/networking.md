@@ -281,16 +281,3 @@ the `vpn` router SNATs to `10.212.2.160`, a Trusted address, which
 The NAS binds SMB and ssh to Trusted only. Its web UI and API share one
 listener, so the TrueNAS login page is reachable from k8s -- accepted, since
 democratic-csi already holds a full-admin API key.
-
-## Gotchas
-
-- **macOS Sequoia: "No route to host" in a millisecond** is the per-app Local
-  Network permission, not the network. `tcpdump` shows no SYN. *System
-  Settings* -> *Privacy & Security* -> *Local Network*, or
-  `tccutil reset LocalNetwork`.
-- **`k8s-deny-internal`'s `connection_states` is ignored by tofu** (provider
-  bug: written correctly, read back as null). Verify it in the UI; tofu cannot
-  tell you when it drifts.
-- **Never add `--snat-subnet-routes=false`** on `vpn` or `pi` -- see above.
-- **A name in both `network/` and `guests/`** -- the two layers fight over the
-  record.
