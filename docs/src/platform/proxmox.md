@@ -48,7 +48,7 @@ NIC quirks), and the VMs themselves (PBS has them).
 
 ## Backup & restore
 
-The host is **not backed up** -- see [Not covered](../backups.md#not-covered).
+The host is **not backed up**.
 The VMs are, by [PBS](../backups.md#pbs).
 
 **Dead node.** Reinstall, `mise run machine-config`, then PBS first and the

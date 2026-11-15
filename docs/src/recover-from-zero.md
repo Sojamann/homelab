@@ -5,7 +5,7 @@ each backup is restored. The steps themselves live on the linked pages.
 
 Not every disaster is this one. Something narrower broke: the
 [scenario index](backups.md#scenario-index). The NAS is gone: there is no
-recovery yet -- see [Not covered](backups.md#not-covered).
+recovery yet -- see [Off-site](backups.md#off-site).
 
 **Last verified:** never, end to end.
 
@@ -51,7 +51,7 @@ graph TD
 | 0 | **Secrets** | `git clone --recurse-submodules`, put the vault password at `secrets/.vault-pass` (0600), `mise install` | [Secrets repo](backups.md#secrets-repo): this *is* the restore |
 | 1 | **Bootstrap** | only what is gone: gateway adopted, Cloudflare zone + token, tailnet + OAuth client. [Build guide: Bootstrap](build/bootstrap/README.md) | -- |
 | 2 | **Network** | `mise run network apply`: VLANs, DNS, firewall, wifi, tailnet policy. [Build guide: Network](build/network/README.md) | -- (state is in `secrets/`) |
-| 3 | **NAS** | if it survived: nothing. Boot disk (eMMC) dead, pools intact: reinstall TrueNAS, import both pools, unlock with the passphrase. Else TrueNAS, pools, datasets, shares, Garage, node-exporter -- [Build guide: TrueNAS](build/machines/truenas.md). Garage must answer before stage 5 | a rebuilt NAS has no backups: [Not covered](backups.md#not-covered) |
+| 3 | **NAS** | if it survived: nothing. Boot disk (eMMC) dead, pools intact: reinstall TrueNAS, import both pools, unlock with the passphrase. Else TrueNAS, pools, datasets, shares, Garage, node-exporter -- [Build guide: TrueNAS](build/machines/truenas.md). Garage must answer before stage 5 | a rebuilt NAS has no backups |
 | 4 | **Proxmox** | install titan, ssh key, `pvecm create lab`, then `mise run machine-config` -- [Build guide: Proxmox](build/machines/proxmox.md), [machine-config](build/machine-config/README.md) | -- (host config is rebuilt, not restored) |
 | 5 | **PBS** | `mise run guests apply -target=proxmox_virtual_environment_vm.pbs` **only**, install PBS, re-add the Garage endpoint and datastore on the existing bucket | [PBS, *Dead node*](backups.md#pbs) |
 | 6 | **VMs from PBS** | restore 160 (vpn), 161 (Home Assistant), 4010 (Talos) under their own ids; then `mise run guests plan` -- close to a no-op | [PBS](backups.md#pbs). Home Assistant: if its PBS copy is bad, a fresh VM + [its own backups](backups.md#ha-backups) |

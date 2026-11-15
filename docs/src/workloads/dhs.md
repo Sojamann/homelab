@@ -72,7 +72,7 @@ It runs as the read-only `backup` role (`pg_read_all_data`).
 
 Covered by [ZFS snapshots](../backups.md#zfs-snapshots) of `postgres-dump`,
 24 hourly + 30 daily, replicated to `slow/fast-replica`: a dump per night for
-30 days. The rest of the box is [not covered](../backups.md#not-covered).
+30 days. The rest of the box is not backed up.
 
 **Restore.** Untested end to end; the dump itself is drilled (below). The
 box's postgres is overwritten in place, so stop the app first.

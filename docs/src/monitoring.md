@@ -149,7 +149,7 @@ knows; the account and the email are configured in Cronitor.
 | Heartbeat URL | `heartbeat_url` | `kv/monitoring/alerting`, mounted as a file |
 
 Rotate: change the vault, `mise run platform apply`, force-sync the
-`alerting` ExternalSecret (see [Rotating](access.md#rotating)); Alertmanager
+`alerting` ExternalSecret; Alertmanager
 re-reads the files.
 
 ## Dashboards

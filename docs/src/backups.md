@@ -1,8 +1,7 @@
 # Backups & restore
 
 Every backup in the lab lands on one box: the NAS's `slow` mirror. Off-site
-is not built, so the NAS is the single place everything is lost at once --
-see [Not covered](#not-covered).
+is not built, so the NAS is the single place everything is lost at once.
 
 ```mermaid
 graph LR
@@ -91,7 +90,7 @@ has restore points seconds apart.
 | One dead `fast` NVMe on the NAS | [TrueNAS, *Replacing a drive*](platform/truenas.md#replace-drive) |
 | Both `fast` NVMes dead | [ZFS snapshots](#zfs-snapshots), *Lost `fast` pool* |
 | Lost cluster | [Recover from zero](recover-from-zero.md); the Talos VM from [PBS](#pbs), or rebuild and restore each `fast` PVC from its old zvol ([ZFS snapshots](#zfs-snapshots)); [etcd](#etcd-snapshots) only if a snapshot exists |
-| Dead NAS | [Not covered](#not-covered) |
+| Dead NAS | No recovery; [off-site](#off-site) not built |
 | Lost laptop, or lost vault password | [Secrets repo](#secrets-repo) |
 
 ## ZFS snapshots {#zfs-snapshots}
@@ -446,30 +445,3 @@ Not routes you plan around, but they exist:
   destructive. By hand; its contents are rebuilt by tofu anyway. See
   [OpenBao](platform/openbao.md).
 - **DHS** -- the last dump stays on `postgres-dump` until the next run.
-
-## Not covered {#not-covered}
-
-- **The NAS.** Fire, theft, both HDDs, or a corrupt `slow` pool takes the
-  `bulk` data, the `fast` replica, the user files, Garage (all PBS backups),
-  the HA backups and every snapshot. Until [off-site](#off-site) exists.
-- **A compromised NAS admin or Garage key.** Garage has no object lock;
-  snapshots can be destroyed by the same admin. The 7-day `slow/garage`
-  snapshot covers only a client deleting its own bucket.
-- **The PBS VM's configuration** -- datastore, jobs, users, Pocket ID realm.
-  Rebuilt by hand from [guests/README.md](build/guests/README.md#backups).
-- **Proxmox host configuration** (`/etc/pve`: backup job, storage entries,
-  realm, ACME). Rebuilt by machine-config and the manual steps in
-  [machines/proxmox.md](build/machines/proxmox.md).
-- **TrueNAS configuration** -- users, shares, tasks, certificates, apps. No
-  export is documented. The pool passphrase (both pools are encrypted) is in
-  the password managers.
-- **Time Machine datasets** -- no snapshots by design; the Mac is the
-  original.
-- **The DHS box** beyond its database: compose files, tailscale state.
-- **`.vault-pass`** -- not committed; its second copy is in the password
-  managers.
-- **Failures outside Prometheus.** Only the `fast`/`bulk` snapshots, their
-  replica and the DHS dump alert from Prometheus. A failed PBS job or ZFS task reaches Telegram only through
-  PVE's / PBS's / TrueNAS's own notifications (set up in the UI, not in this
-  repo); a failed HA backup is seen only by looking. SMART tests are not set up,
-  so a dying HDD in the mirror shows up only in a scrub.

@@ -194,30 +194,6 @@ re-initialise and `mise run platform apply`, not a reconstruction.
    `secretStoreRef: { kind: ClusterSecretStore, name: openbao }` and
    `remoteRef.key: <ns>/<app>`.
 
-### Rotating
-
-Change the value at its source (vault, or `tofu taint` the `random_password`),
-`mise run platform apply`, then make the app see it -- ESO refreshes hourly,
-and most apps read env only at start:
-
-```sh
-kubectl -n <ns> annotate externalsecret <name> force-sync=$(date +%s) --overwrite
-kubectl -n <ns> rollout restart deploy/<name>
-```
-
-Worked example: [Vaultwarden admin token](workloads/vaultwarden.md#admin-token).
-
-## What breaks without it
-
-- **Pocket ID down** -- SSO logins fail; every break-glass above still works.
-  Running sessions continue until they expire.
-- **OpenBao down** -- no new or rotated Secrets; existing Secrets stay, so
-  running and restarting pods are fine. A new namespace's `ExternalSecret`
-  stays unsynced.
-- **external-secrets down** -- same as OpenBao down.
-- **`.vault-pass` lost** -- no tofu layer, no Ansible, no state; see
-  [Secrets repo](backups.md#secrets-repo).
-
 ## Gotchas
 
 - **ESO reads the whole tree.** Anything that can create an `ExternalSecret`

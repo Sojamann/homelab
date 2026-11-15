@@ -68,8 +68,7 @@ Not state: the apps' containers (compose files in git), the certificate
 Datasets: [ZFS snapshots](../backups.md#zfs-snapshots). Garage keeps its own
 metadata snapshot every 6h (`metadata_auto_snapshot_interval`), same dataset.
 **The NAS itself, and its configuration, are not backed up** -- users,
-shares, tasks, certificates, apps. See
-[Not covered](../backups.md#not-covered). A dead boot disk (eMMC) with the
+shares, tasks, certificates, apps. A dead boot disk (eMMC) with the
 pools intact: reinstall TrueNAS, import `fast` and `slow`, unlock them with
 the pool passphrase from the password managers, then redo the configuration
 from [Build guide: TrueNAS](../build/machines/truenas.md). A dead NAS, pools

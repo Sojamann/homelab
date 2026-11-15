@@ -4,7 +4,6 @@
 
 # Topics
 
-- [Recover from zero](recover-from-zero.md)
 - [Workloads](workloads/index.md)
   - [Vaultwarden](workloads/vaultwarden.md)
   - [Mealie](workloads/mealie.md)
@@ -34,6 +33,7 @@
 - [Maintenance](maintenance.md)
 - [Conventions](conventions.md)
 - [Hardware](hardware.md)
+- [Recover from zero](recover-from-zero.md)
 
 # Build guide
 
