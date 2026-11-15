@@ -190,12 +190,13 @@ SCHEMATIC="$(mise run cluster output -raw talos_schematic_id)"
 [ "$SCHEMATIC" = "$(mise run guests output -raw talos_schematic_id)" ] \
     && echo match || echo MISMATCH
 
-# 5. upgrade (in this example 1.13.11)
-talosctl -n "$NODE" upgrade --preserve \
+# 5. upgrade (in this example 1.13.11); --drain=false: see Talos gotchas
+talosctl -n "$NODE" upgrade --preserve --drain=false \
     --image factory.talos.dev/nocloud-installer/"$SCHEMATIC":v1.13.11
 
 # 6. verify before moving to the next node
 talosctl -n "$NODE" health
+kubectl get node   # SchedulingDisabled after a failed drain: kubectl uncordon
 talosctl -n "$NODE" version --short
 
 # 7. once all nodes are done: kubernetes upgrade (below)

@@ -111,6 +111,11 @@ pod annotation so a values-only change actually rolls the pods.
 - **`talosctl upgrade --preserve` on a single control plane.** Without it the
   upgrade wipes `EPHEMERAL` and removes the node from etcd -- the whole
   cluster.
+- **`talosctl upgrade --drain=false` on a single node.** Drain has nowhere to
+  move pods, and CNPG's primary PDB (`instances: 1` -> 0 allowed disruptions)
+  blocks eviction until the drain times out, leaving the node cordoned on the
+  old version. The reboot still stops pods gracefully, within the kubelet's
+  shutdown grace period.
 - **The VIP comes up only once etcd has a leader.** On one node "etcd
   unhealthy" and "`k8s.<lab_domain>` answers nothing" are the same event; use
   the Talos API on the node address.
