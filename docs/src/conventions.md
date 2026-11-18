@@ -81,5 +81,3 @@ and notes the parent commit on the submodule's. See
   for the apps repo).
 - Commands run from the repo root: `mise` sets `KUBECONFIG` and `TALOSCONFIG`
   to `secrets/kubeconfig` and `secrets/talosconfig`.
-- **Last verified** dates on restore procedures say when they were last
-  actually run.

@@ -35,48 +35,20 @@ graph LR
   nas -.-x B2
 ```
 
-## Coverage matrix
+## Coverage {#coverage-matrix}
 
-What each route holds, with retention. ✓ covered, ✗ not covered, n/a the
-route cannot apply. *Other* lists the incidental copies under
-[Other copies](#other-copies).
-
-| What | [ZFS](#zfs-snapshots) | [PBS](#pbs) | [HA own](#ha-backups) | [Secrets repo](#secrets-repo) | [etcd](#etcd-snapshots) | [Off-site](#off-site) | Other |
-|--|--|--|--|--|--|--|--|
-| **Vaultwarden** (`vaultwarden-data`, fast) | ✓ fast + replica | n/a | n/a | admin token hash | n/a | ✗ | clients' offline cache, items only |
-| **Memos** attachments (`slow/k8s-csi/memos`) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | |
-| **Memos** db (`memos-data`, fast) | ✓ fast + replica | n/a | n/a | n/a | n/a | ✗ | |
-| **Nextcloud** files (`slow/k8s-csi/nextcloud`) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | trash bin + versions in Nextcloud; synced clients |
-| **Nextcloud** db (CNPG `nextcloud-db-1`, fast) | ✓ fast + replica, crash-consistent | n/a | n/a | n/a | n/a | ✗ | |
-| **Nextcloud** html + config (`nextcloud-html`, fast) | ✓ fast + replica | n/a | n/a | admin password, OIDC client | n/a | ✗ | |
-| **Mealie** (`mealie-data`, fast) | ✓ fast + replica | n/a | n/a | n/a | n/a | ✗ | |
-| **DHS** postgres (external Hetzner box) | ✓ fast + replica, of the nightly dump | n/a | n/a | backup role password | n/a | ✗ | last dump on `postgres-dump` |
-| **Kassenbuch** (`kassenbuch-data`, bulk) | ✓ bulk | n/a | n/a | password hash | n/a | ✗ | |
-| **Supplement tracker** (bulk) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | |
-| **Glance** | n/a | n/a | n/a | n/a | n/a | n/a | stateless, config in git |
-| **Home Assistant** (VM 161) | n/a | ✓ last 3, d7 w4 m6 | ✓ schedule in the appliance | n/a | n/a | ✗ | |
-| **Pocket ID** (`pocket-id-state`, fast) | ✓ fast + replica | n/a | n/a | encryption key (tofu state) | n/a | ✗ | |
-| **OpenBao** (`data-openbao-0`, fast) | ✓ fast + replica | n/a | n/a | ✓ every value + seal key | n/a | ✗ | `bao operator raft snapshot`, by hand |
-| **Zot** (`zot-data`, bulk) | ✓ bulk | n/a | n/a | n/a | n/a | ✗ | rebuildable from source |
-| **Prometheus, Alertmanager, VictoriaLogs** (fast) | ✓ fast + replica | n/a | n/a | n/a | n/a | ✗ | history only |
-| **VPN VM** (160) | n/a | ✓ last 3, d7 w4 m6 | n/a | n/a | n/a | ✗ | |
-| **Talos VM** (4010) | n/a | ✓ last 3, d7 w4 m6 | n/a | machine secrets (tofu state) | ✓ by hand, no schedule | ✗ | |
-| **PBS VM** (162) | n/a | ✗ excluded | n/a | n/a | n/a | ✗ | rebuilt by hand |
-| **Cluster objects** | n/a | via the Talos VM | n/a | ✓ tofu state | ✓ by hand | ✗ | flux/ in git |
-| `slow/users/*/files` | ✗ drop share only | n/a | n/a | n/a | n/a | ✗ | personal files live in Nextcloud |
-| `slow/users/*/time-machine` | ✗ by design | n/a | n/a | n/a | n/a | ✗ | the Mac is the original |
-| `slow/garage` (every S3 backup) | ✓ 7 daily | n/a | n/a | n/a | n/a | ✗ | Garage metadata snapshot 6h |
-| `slow/ha-backups` | ✓ 14 daily | n/a | n/a | n/a | n/a | ✗ | |
-| `slow/node-exporter` | ✗ nothing to keep | n/a | n/a | n/a | n/a | n/a | |
-| TrueNAS config | ✗ | n/a | n/a | n/a | n/a | ✗ | none documented |
-| Proxmox host config (`/etc/pve`) | n/a | ✗ | n/a | API token | n/a | ✗ | rebuilt by machine-config + manual steps |
-| `vault.yml`, tofu state | n/a | n/a | n/a | ✓ full git history | n/a | GitHub | every clone |
-| `.vault-pass` | n/a | n/a | n/a | ✗ not committed | n/a | ✗ | not documented |
-
-*fast + replica*: 24 hourly + 30 daily on `fast/k8s-csi/vols`, the same
-replicated to `slow/fast-replica`. *bulk*: 24 hourly + 30 daily on
-`slow/k8s-csi`. Both tasks fire at the same minute, so an app spanning both
-has restore points seconds apart.
+- **`fast` + replica** ([ZFS](#zfs-snapshots)): Vaultwarden, Memos db,
+  Nextcloud db + html, Mealie, DHS dump, Pocket ID, OpenBao, Prometheus,
+  Alertmanager, VictoriaLogs
+- **`bulk`** ([ZFS](#zfs-snapshots)): Memos attachments, Nextcloud files,
+  Kassenbuch, Supplement tracker, Zot
+- **[PBS](#pbs)**: VMs 160 (VPN), 161 (Home Assistant, plus
+  [its own backups](#ha-backups)), 4010 (Talos)
+- **[Secrets repo](#secrets-repo)**: `vault.yml`, tofu state (CAs, OpenBao
+  values + seal key, Pocket ID key)
+- **[etcd](#etcd-snapshots)**: by hand only
+- **Nothing**: PBS VM 162, TrueNAS config, Proxmox `/etc/pve`, `.vault-pass`,
+  `slow/users/*`, [off-site](#off-site). Glance is stateless.
 
 ## Scenario index
 
@@ -140,8 +112,6 @@ The copies are crash-consistent: SQLite and postgres recover from their
 journal/WAL like after a power cut. Anything that does not fsync can lose
 what was still in the page cache; the DHS dump is written aside, synced and
 renamed for that reason.
-
-**Credentials.** The NAS UI login; see [TrueNAS](platform/truenas.md).
 
 **Health check.** `NasSnapshotStale` covers `fast/k8s-csi/vols`,
 `slow/fast-replica` and `slow/k8s-csi`, `PersistentVolumeStuckReleased` a
@@ -239,45 +209,28 @@ zfs list -H -o name,lab:pvc -r slow/fast-replica | grep '<ns>/'
 zfs destroy -r slow/fast-replica/pvc-<uuid>
 ```
 
-**Drill.** In a throwaway `drill` namespace, one 1Gi `fast` and one `bulk`
-PVC with 10 MiB plus its `sha256` each: wait for a snapshot, replication and
-the fixup; overwrite and restore in place; delete the PVCs (the PVs must go
-without help); recreate them and restore from `slow/fast-replica` and
-`.zfs/snapshot`; `sha256sum -c`. Afterwards delete the namespace and the
-replicas as in *Removing an app*.
-
-**Last verified:** 2026-11-14, the drill above (mechanism only, no real app).
-The fast and bulk snapshots of one run had the same creation second. DHS's
-dump: 2026-10-27, restored into a throwaway postgres (12 tables, clean) --
-not onto the box.
-
 ## PBS on Garage {#pbs}
 
-**How it works.** A PVE backup job sends every VM except PBS itself to the PBS
-VM (162), whose datastore `proxmox-backups` is an S3 datastore in Garage
-(bucket `proxmox-backups`, quota 300G) with a local cache disk. Incremental,
+**How it works.** A PVE job backs up every VM except PBS (162) to the PBS
+VM, whose datastore `proxmox-backups` is S3 in Garage (bucket
+`proxmox-backups`, quota 300G) with a local cache disk. Incremental,
 deduplicated, per-VM and per-file restore. Built in
-[guests/README.md](build/guests/README.md#backups); the component is
-[Proxmox Backup Server](platform/pbs.md).
+[guests/README.md](build/guests/README.md#backups); component:
+[Proxmox Backup Server](platform/pbs.md). PBS skips itself (it cannot restore
+itself, and would back up its own chunk store), so its config is not backed up.
 
-PBS is excluded from its own job: it cannot restore itself, and it would back
-up its own chunk store. Its configuration is therefore not backed up.
+**Not client-side encrypted**: `pbs-s3` has no encryption key. Anyone with
+the Garage key reads every VM disk.
 
-Backups are **not client-side encrypted**: the PVE storage entry `pbs-s3` has
-no encryption key (`/etc/pve/priv/storage/` holds only `pbs-s3.pw`). Anyone
-with the Garage key reads every VM disk.
-
-**Schedule / retention.** The order matters -- prune must count the backup
-before it, and GC is the expensive one.
+**Schedule / retention.** In this order: prune must see the backup, GC is the
+expensive one. PVE's job keeps all; pruning is PBS's alone.
 
 | Job | Where | Schedule |
 |--|--|--|
-| Backup | PVE, *Datacenter* -> *Backup*, mode snapshot, all VMs, exclude 162 | `23:00` daily |
-| Prune | PBS datastore | `04:00` daily: keep last 3, daily 7, weekly 4, monthly 6 |
+| Backup | PVE *Datacenter* -> *Backup*, snapshot mode, exclude 162 | `23:00` daily |
+| Prune | PBS datastore | `04:00` daily: last 3, d7 w4 m6 |
 | GC | PBS datastore | `sun 05:00` |
 | Verify | PBS datastore | `sat 22:00`, skip verified |
-
-PVE's own retention on the job is `keep-all`: pruning is PBS's alone.
 
 **Credentials.**
 
@@ -287,10 +240,9 @@ PVE's own retention on the job is `keep-all`: pruning is PBS's alone.
 | PVE -> PBS | token `backup@pbs!lab` (DatastoreBackup), stored in `/etc/pve/priv/storage/pbs-s3.pw` |
 | PBS UI | Pocket ID; `root@pam` break-glass |
 
-**Health check.** Nothing in Prometheus. The job notifies on failure through
-PVE's notification system, to Telegram (set up in the UI, not in this repo).
-In the UI: PBS -> *Datastore* -> `proxmox-backups` -> *Content* (last
-snapshot per VM, verify state). On titan:
+**Health check.** Nothing in Prometheus; PVE notifies failures to Telegram
+(set up in the UI). PBS -> *Datastore* -> `proxmox-backups` -> *Content*
+shows last snapshot and verify state per VM. On titan:
 
 ```sh
 pvesm list pbs-s3 | tail
@@ -306,8 +258,7 @@ qmrestore pbs-s3:backup/vm/<id>/<timestamp> <id> --storage local --force 1
 
 Single files: *Storage* `pbs-s3` -> *Backups* -> *File Restore*.
 
-**Dead node.** titan is the only node, so PBS dies with it; the backups are
-in Garage.
+**Dead node.** PBS dies with titan; the backups are in Garage.
 
 1. Reinstall the node ([machines/proxmox.md](build/machines/proxmox.md)),
    then `mise run machine-config`.
@@ -320,12 +271,9 @@ in Garage.
 4. Restore the VMs as above.
 5. `mise run guests plan` -- should now be close to a no-op.
 
-**Restoring the Talos VM** rolls etcd back to 23:00 of that day. PVCs live on
-the NAS, so anything created after that is an orphan on `fast` and anything
-deleted after it is a PV pointing at nothing.
-
-**Last verified:** never. The datastore move (iSCSI -> S3) lists a restore
-test as a step, but no result is recorded.
+**Restoring the Talos VM** rolls etcd back to 23:00. PVCs live on the NAS:
+ones created since are orphans on `fast`, ones deleted since are PVs pointing
+at nothing.
 
 ## Home Assistant's own backups {#ha-backups}
 
@@ -349,8 +297,6 @@ last successful one; the share shows the files.
 pick -> *Restore*. Into a fresh one (e.g. a VM rebuilt from the image): copy
 the `.tar` off the share, choose *Upload backup* at onboarding, give the key.
 App specifics: [Home Assistant](workloads/home-assistant.md).
-
-**Last verified:** never.
 
 ## Secrets repo {#secrets-repo}
 
@@ -396,9 +342,6 @@ mise run cluster plan    # proves vault + state decrypt
 # talosconfig/kubeconfig come back with the next `mise run cluster apply`
 ```
 
-**Last verified:** never from a fresh clone. Decryption itself runs on every
-`mise run <layer>`.
-
 ## etcd snapshots {#etcd-snapshots}
 
 **How it works.** By hand, before a Talos or Kubernetes upgrade (see
@@ -423,25 +366,7 @@ The cluster layer bootstraps etcd itself on apply, so this has to happen
 before that resource runs. Untested here; upstream:
 [Talos disaster recovery](https://www.talos.dev/latest/advanced/disaster-recovery/).
 
-**Last verified:** never.
-
 ## Off-site (B2) {#off-site}
 
 **Not built.** Intended: Backblaze B2, Nextcloud's files first.
 Until it exists, losing the NAS loses every backup on this page.
-
-**Last verified:** n/a.
-
-## Other copies {#other-copies}
-
-Not routes you plan around, but they exist:
-
-- **Vaultwarden clients** -- every logged-in client caches the vault items
-  (not attachments or Sends). See [Vaultwarden](workloads/vaultwarden.md).
-- **Garage metadata** -- Garage snapshots its LMDB every 6h inside
-  `slow/garage/meta`, against metadata corruption. Same dataset, so no
-  protection from losing it.
-- **OpenBao raft** -- `bao operator raft snapshot save` before anything
-  destructive. By hand; its contents are rebuilt by tofu anyway. See
-  [OpenBao](platform/openbao.md).
-- **DHS** -- the last dump stays on `postgres-dump` until the next run.

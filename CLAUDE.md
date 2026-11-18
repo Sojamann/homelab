@@ -18,5 +18,4 @@
   - `flux/infrastructure/<x>` -> its `platform/<x>.md` (kube-prometheus-stack -> `monitoring.md`, tailscale -> `networking.md`)
   - vault keys, `secrets/` layout -> `access.md`, `conventions.md`
   - Renovate config, upgrade steps -> `maintenance.md`
-  - restore drill performed -> its **Last verified** date in `backups.md`
 - `mise run docs build` must pass (zero broken links)

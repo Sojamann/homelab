@@ -101,8 +101,8 @@ and check the expiry in a browser on the Proxmox, PBS and TrueNAS UIs. See
 
 ### Yearly: re-drill restores {#drill}
 
-Once a year, actually restore something per route and update its **Last
-verified** date on [Backups & restore](backups.md):
+Once a year, actually restore something per route on
+[Backups & restore](backups.md):
 
 - [ZFS snapshots](backups.md#zfs-snapshots) -- the drill in a throwaway
   namespace (`fast` and `bulk`, in place and from the replica), or one real

@@ -7,8 +7,6 @@ Not every disaster is this one. Something narrower broke: the
 [scenario index](backups.md#scenario-index). The NAS is gone: there is no
 recovery yet -- see [Off-site](backups.md#off-site).
 
-**Last verified:** never, end to end.
-
 ## Have in hand
 
 Without the first three, stop: nothing below works.
@@ -137,4 +135,3 @@ pvesm list pbs-s3 | tail                    # tonight's 23:00 run is there tomor
   Nextcloud.
 - `git status` and `git -C secrets status -sb` clean and pushed -- the new
   root token and any regenerated state are backed up.
-- Update **Last verified** on every route you restored.
