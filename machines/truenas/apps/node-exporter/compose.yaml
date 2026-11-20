@@ -4,7 +4,7 @@ services:
       - '--path.rootfs=/host'
       - '--web.listen-address=10.212.4.150:9100'
       - '--collector.textfile.directory=/textfile'
-    image: quay.io/prometheus/node-exporter:v1.12.1
+    image: quay.io/prometheus/node-exporter:v1.13.1
     network_mode: host
     pid: host
     restart: unless-stopped
