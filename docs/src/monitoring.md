@@ -306,6 +306,10 @@ else depends on the stack.
 - **VMSingle has no size cap.** A full volume stops ingestion instead of
   trimming history. `KubePersistentVolumeFillingUp` warns first; grow the PVC
   (online, never shrinks) before raising `retentionPeriod`.
+- **The apiserver's histograms are dropped** at scrape (`kubeApiServer` in
+  `release.yaml`), all but the two a chart rule reads -- they were ~70% of all
+  series. A panel or rule on another apiserver/etcd `_bucket` gets nothing
+  until it is added to that exception.
 - **The chart's rules need `raw.githubusercontent.com`** at deploy time. The
   sync-job failing leaves the previous `VMRule`s in place.
 - **Grafana at 400Mi** was ~200KiB under its peak and got killed on liveness;
