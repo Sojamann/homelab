@@ -15,7 +15,7 @@
   - `guests/` -> the VM's platform/workload page + the diagram in `index.md`
   - `cluster/` -> `platform/talos.md`
   - `platform/` -> `storage.md`, `platform/flux.md`, `platform/openbao.md`, `networking.md#front-door`, `access.md`
-  - `flux/infrastructure/<x>` -> its `platform/<x>.md` (kube-prometheus-stack -> `monitoring.md`, tailscale -> `networking.md`)
+  - `flux/infrastructure/<x>` -> its `platform/<x>.md` (victoria-metrics -> `monitoring.md`, tailscale -> `networking.md`)
   - vault keys, `secrets/` layout -> `access.md`, `conventions.md`
   - Renovate config, upgrade steps -> `maintenance.md`
 - `mise run docs build` must pass (zero broken links)
