@@ -39,6 +39,32 @@ resource "vault_kv_secret_v2" "grafana_oidc" {
 }
 
 ####################################
+#           OAUTH2-PROXY           #
+####################################
+
+# 32 characters: oauth2-proxy wants a 16, 24 or 32 byte AES key. Rotating it
+# logs everyone out of VMUI, VictoriaLogs and Alertmanager, nothing more.
+resource "random_password" "oauth2_proxy_cookie" {
+  length  = 32
+  special = false
+}
+
+# The client is issued by Pocket ID when registered by hand, so it arrives
+# through `secrets/vault.yml`. Lost, the three UIs are a port-forward away.
+resource "vault_kv_secret_v2" "oauth2_proxy" {
+  mount = vault_mount.kv.path
+  name  = "monitoring/oauth2-proxy"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    client-id     = var.oauth2_proxy_oidc_client_id
+    client-secret = var.oauth2_proxy_oidc_client_secret
+    cookie-secret = random_password.oauth2_proxy_cookie.result
+  })
+}
+
+####################################
 #             ALERTING             #
 ####################################
 
@@ -59,7 +85,7 @@ resource "vault_kv_secret_v2" "alerting" {
     telegram-bot-token = var.telegram_bot_token
 
     # Pinged by the permanently-firing `Watchdog` alert every 5 minutes. When
-    # the pings stop -- a dead Prometheus, a dead cluster, a dead WAN --
+    # the pings stop -- a dead VictoriaMetrics, a dead cluster, a dead WAN --
     # whoever hosts this URL is what notices, from outside the lab. Which
     # service that is, this repo does not need to know.
     heartbeat-url = var.heartbeat_url
@@ -71,7 +97,7 @@ resource "vault_kv_secret_v2" "alerting" {
 ####################################
 
 # Garage runs on the NAS, so its token is generated there and arrives through
-# `secrets/vault.yml`. Prometheus reads it from here.
+# `secrets/vault.yml`. VMAgent reads it from here.
 resource "vault_kv_secret_v2" "garage_metrics" {
   mount = vault_mount.kv.path
   name  = "monitoring/garage"

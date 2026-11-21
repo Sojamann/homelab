@@ -22,7 +22,7 @@ Covered inside a topic, no page of their own:
 |--|--|
 | cert-manager, the Gateway (front door), Tailscale operator | [Networking](../networking.md) |
 | democratic-csi, csi-driver-nfs, snapshot-controller | [Storage](../storage.md) |
-| kube-prometheus-stack | [Monitoring & alerting](../monitoring.md) |
+| victoria-metrics-k8s-stack | [Monitoring & alerting](../monitoring.md) |
 
 ```mermaid
 graph BT

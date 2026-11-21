@@ -64,7 +64,7 @@ Other placeholders are what they say: `<ns>`, `<pvc>`, `<name>`, `<id>`,
 
 ## Alert rules
 
-Every rule the lab adds carries the label `origin: lab`, which the ~134 rules
+Every rule the lab adds carries the label `origin: lab`, which the rules
 the chart ships do not: `origin="lab"` in Alertmanager, `label:origin=lab` in
 Grafana. See [Monitoring](monitoring.md).
 

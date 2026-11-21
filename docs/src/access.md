@@ -20,7 +20,7 @@ graph LR
   L -->|Secret/cluster-vars| FLUX["Flux postBuild"]
   BAO -->|ClusterSecretStore openbao| ESO["external-secrets"]
   ESO -->|ExternalSecret| S[["Secret in the app's namespace"]]
-  PID["Pocket ID"] -->|OIDC| PEOPLE["Grafana, OpenBao, Proxmox, PBS, Memos, Mealie, Nextcloud"]
+  PID["Pocket ID"] -->|OIDC| PEOPLE["Grafana, oauth2-proxy, OpenBao, Proxmox, PBS, Memos, Mealie, Nextcloud"]
 ```
 
 ## Logging in: Pocket ID {#sso}
@@ -37,6 +37,7 @@ Details, users, groups and recovery: [Pocket ID](platform/pocket-id.md).
 | Uses Pocket ID | How the group maps |
 |--|--|
 | Grafana | `admins` -> Admin, anyone else refused; no anonymous access (logs) |
+| oauth2-proxy (VMUI, VictoriaLogs, Alertmanager) | `admins` only; one cookie for all three |
 | OpenBao | `admins` only, policy `admin`, 8h token |
 | Proxmox | `admins` -> group `admins-pocket-id`, Administrator; rights re-read every login |
 | PBS | no group mapping: each admin is created by hand as `<name>@pocket-id` |
@@ -46,7 +47,7 @@ Details, users, groups and recovery: [Pocket ID](platform/pocket-id.md).
 
 No SSO: TrueNAS (no OIDC), Vaultwarden (deliberately -- see
 [Vaultwarden](workloads/vaultwarden.md#not-enabled)), Kassenbuch,
-Home Assistant. Glance, Supplement tracker and Alertmanager have no login at
+Home Assistant. Glance and Supplement tracker have no login at
 all: being on the LAN or tailnet is the access control.
 
 ## Break-glass {#break-glass}
@@ -168,6 +169,7 @@ tree: copied from the vault, or generated with `random_password`. The tree is
 |--|--|--|
 | `kv/monitoring/grafana` | Grafana admin | generated |
 | `kv/monitoring/grafana-oidc` | Grafana's Pocket ID client | vault |
+| `kv/monitoring/oauth2-proxy` | oauth2-proxy's Pocket ID client; cookie secret | vault; generated |
 | `kv/monitoring/alerting` | Telegram bot token, heartbeat URL | vault |
 | `kv/monitoring/garage` | Garage metrics token | vault |
 | `kv/kassenbuch/app` | password hash | vault |

@@ -77,6 +77,17 @@ variable "grafana_oidc_client_secret" {
   sensitive   = true
 }
 
+variable "oauth2_proxy_oidc_client_id" {
+  description = "oauth2-proxy's client id in Pocket ID (VMUI, VictoriaLogs, Alertmanager)"
+  type        = string
+}
+
+variable "oauth2_proxy_oidc_client_secret" {
+  description = "oauth2-proxy's client secret in Pocket ID -- shown once, at registration"
+  type        = string
+  sensitive   = true
+}
+
 variable "memos_oidc_client_id" {
   description = "Memos' client id in Pocket ID"
   type        = string

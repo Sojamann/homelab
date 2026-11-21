@@ -1,5 +1,5 @@
 ---
-# Two exporters per host, scraped by the cluster's Prometheus -- see
+# Two exporters per host, scraped by the cluster's VMAgent -- see
 # flux/docs/monitoring.md. Both bind the host's Trusted address only.
 #
 # pve-exporter is not packaged in Debian, so it comes from PyPI into its own

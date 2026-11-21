@@ -137,7 +137,7 @@ pod annotation so a values-only change actually rolls the pods.
   free), so a burst of pulls (a Renovate batch) tainted the node with
   `DiskPressure` before the 5-min GC loop ran. Debug a recurrence:
   `talosctl logs kubelet | grep -E 'eviction_manager|image_gc'` and node
-  events. In Prometheus `/var` matches the NAS and PVE too; filter by
+  events. In VictoriaMetrics `/var` matches the NAS and PVE too; filter by
   `device="/dev/sda5"`.
 - **Talos has no SSH.** Logs and files go through `talosctl logs`,
   `talosctl read`, `talosctl dashboard`.
@@ -145,7 +145,7 @@ pod annotation so a values-only change actually rolls the pods.
 ## What breaks without it
 
 Every workload: all apps, Pocket ID (so SSO falls back to break-glass
-everywhere), OpenBao, Zot, Prometheus and Alertmanager. Alerts stop too --
+everywhere), OpenBao, Zot, VictoriaMetrics and Alertmanager. Alerts stop too --
 the external `Watchdog` heartbeat noticing the silence is the only signal
 (see [Monitoring](../monitoring.md)). Proxmox, the NAS, PBS, the VPN and Home
 Assistant are unaffected.

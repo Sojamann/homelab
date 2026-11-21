@@ -110,7 +110,7 @@ old directory as source. Zot can instead be refilled by pushing the images again
 Memos' attachments and Nextcloud's files are static PVs onto
 `slow/k8s-csi/memos` and `slow/k8s-csi/nextcloud` and need nothing.
 
-**Not restored, rebuilt:** Prometheus, Alertmanager and VictoriaLogs history (gone),
+**Not restored, rebuilt:** VictoriaMetrics, Alertmanager and VictoriaLogs history (gone),
 Grafana (stateless), Glance (stateless), OpenBao (from tofu), the CloudNativePG
 operator (from git; Nextcloud's database comes back with its zvol, above).
 

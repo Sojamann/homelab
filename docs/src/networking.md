@@ -129,7 +129,7 @@ Gateway API `Gateway` (`lab`, namespace `gateway`) on `10.212.4.200`:
 | `login` | [Pocket ID](platform/pocket-id.md) |
 | `bao` | [OpenBao](platform/openbao.md) |
 | `registry` | [Zot](platform/zot.md) |
-| `grafana`, `alertmanager` | [Monitoring](monitoring.md) |
+| `grafana`, `metrics`, `logs`, `alertmanager` | [Monitoring](monitoring.md) |
 
 Reachable from Trusted and the tailnet; not from the internet.
 

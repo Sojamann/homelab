@@ -146,6 +146,7 @@ case "$layer" in
 
     # Pocket ID clients, issued by Pocket ID at registration.
     for key in grafana_oidc_client_id grafana_oidc_client_secret \
+      oauth2_proxy_oidc_client_id oauth2_proxy_oidc_client_secret \
       bao_oidc_client_id bao_oidc_client_secret \
       memos_oidc_client_id memos_oidc_client_secret \
       mealie_oidc_client_id mealie_oidc_client_secret \

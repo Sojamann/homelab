@@ -256,8 +256,8 @@ in *System* -> *General* -> *GUI*, the rest on each service:
 | NVMe-oF | `10.212.4.150`                        | the cluster, nothing else    |
 | NFS     | `10.212.4.150`                        | the cluster, nothing else    |
 | Garage S3 `:3900`    | `10.212.2.150` **and** `10.212.4.150` | PBS on Trusted, pods on k8s |
-| Garage admin `:3903` | `10.212.2.150`; k8s `/metrics` only   | you; Prometheus |
-| node-exporter | `10.212.4.150:9100`             | Prometheus, see [Monitoring](#monitoring) |
+| Garage admin `:3903` | `10.212.2.150`; k8s `/metrics` only   | you; VMAgent |
+| node-exporter | `10.212.4.150:9100`             | VMAgent, see [Monitoring](#monitoring) |
 
 The UI is the uncomfortable row: TrueNAS serves it and the API on one listener
 and cannot split them, so the login page is reachable from k8s. Taken
@@ -360,7 +360,7 @@ away from `10.212.4.150:4420` -- see [network](../network/README.md).
 
 ## Monitoring
 
-node-exporter as a custom app, scraped by the cluster's Prometheus -- see
+node-exporter as a custom app, scraped by the cluster's VMAgent -- see
 [Monitoring](../docs/src/monitoring.md#truenas). Same VLAN, no firewall rule.
 
 1. *Apps* -> *Configuration* -> *Choose Pool*: `slow` -- never `fast`, which

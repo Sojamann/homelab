@@ -38,7 +38,7 @@ graph LR
 ## Coverage {#coverage-matrix}
 
 - **`fast` + replica** ([ZFS](#zfs-snapshots)): Vaultwarden, Memos db,
-  Nextcloud db + html, Mealie, DHS dump, Pocket ID, OpenBao, Prometheus,
+  Nextcloud db + html, Mealie, DHS dump, Pocket ID, OpenBao, VMSingle,
   Alertmanager, VictoriaLogs
 - **`bulk`** ([ZFS](#zfs-snapshots)): Memos attachments, Nextcloud files,
   Kassenbuch, Supplement tracker, Zot
@@ -240,7 +240,7 @@ expensive one. PVE's job keeps all; pruning is PBS's alone.
 | PVE -> PBS | token `backup@pbs!lab` (DatastoreBackup), stored in `/etc/pve/priv/storage/pbs-s3.pw` |
 | PBS UI | Pocket ID; `root@pam` break-glass |
 
-**Health check.** Nothing in Prometheus; PVE notifies failures to Telegram
+**Health check.** Nothing in VictoriaMetrics; PVE notifies failures to Telegram
 (set up in the UI). PBS -> *Datastore* -> `proxmox-backups` -> *Content*
 shows last snapshot and verify state per VM. On titan:
 

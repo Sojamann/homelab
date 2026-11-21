@@ -2,20 +2,25 @@
 
 ## What it's for
 
-One Prometheus in the cluster watches the cluster, the NAS, the Proxmox host
-and the DHS box; Alertmanager posts to one Telegram group; Grafana shows it.
-A heartbeat outside the lab notices when all of that is down at once. The
-stack is kube-prometheus-stack (chart in
-`flux/infrastructure/controllers/kube-prometheus-stack/`); rules, scrapes and
-dashboards are under `flux/infrastructure/configs/` or beside the app that
-owns them. Container logs go to VictoriaLogs, read in the same Grafana (see
-[Logs](#logs)).
+One VictoriaMetrics in the cluster watches the cluster, the NAS, the Proxmox
+host and the DHS box; Alertmanager posts to one Telegram group; Grafana shows
+it. A heartbeat outside the lab notices when all of that is down at once. The
+stack is victoria-metrics-k8s-stack (chart in
+`flux/infrastructure/controllers/victoria-metrics/`): VMAgent scrapes into
+VMSingle, VMAlert evaluates rules against it and sends to Alertmanager. Rules,
+scrapes and dashboards are under `flux/infrastructure/configs/` or beside the
+app that owns them, as native VictoriaMetrics kinds (`VMRule`,
+`VMScrapeConfig`, ...) -- no Prometheus-operator CRDs are installed. Container
+logs go to VictoriaLogs, read in the same Grafana (see [Logs](#logs)).
 
 ```mermaid
 graph LR
   subgraph cl["cluster, ns monitoring"]
-    PROM["Prometheus<br/>30d / 18GB"]
+    AG["VMAgent"]
+    VM["VMSingle<br/>30d, 10Gi"]
+    VMA["VMAlert"]
     AM["Alertmanager"]
+    OP["oauth2-proxy<br/>Pocket ID, admins"]
     GR["Grafana<br/>stateless"]
     VL["VictoriaLogs<br/>30d / 16GiB"]
     VA["vlagent<br/>DaemonSet"]
@@ -25,9 +30,12 @@ graph LR
   GA["Garage /metrics<br/>s3-k8s:3903, bearer"]
   PX["titan :9100 node-exporter<br/>:9221 pve-exporter"]
   DHS["DHS box :9100<br/>via tailscale egress"]
-  PROM -->|scrape| K & NAS & GA & PX & DHS
-  PROM --> AM
-  GR --> PROM & VL
+  AG -->|scrape| K & NAS & GA & PX & DHS
+  AG -->|remote write| VM
+  VMA -->|rules| VM
+  VMA --> AM
+  GR --> VM & VL
+  OP --> VM & VL & AM
   VA -->|"every container's log"| VL
   AM -->|"critical: sound, 4h<br/>warning: silent, 12h"| TG["Telegram group"]
   AM -->|"Watchdog, every 5m"| HB["Cronitor"]
@@ -39,13 +47,18 @@ graph LR
 | What | URL | Login |
 |--|--|--|
 | Grafana | `https://grafana.<app_domain>` | *Sign in with Pocket ID*: `admins` -> Admin, anyone else refused; no anonymous access. Break-glass: the admin form, credentials in `kv/monitoring/grafana` (see [break-glass](access.md#break-glass)) |
-| Alertmanager | `https://alertmanager.<app_domain>` | **none**: every LAN and tailnet device can silence an alert -- the price of silencing from a phone |
-| Prometheus | no route | `kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090` |
-| VictoriaLogs | no route | `kubectl -n monitoring port-forward svc/victoria-logs-server 9428`, UI at `/select/vmui` |
+| VMUI (metrics) | `https://metrics.<app_domain>/vmui` | oauth2-proxy: Pocket ID, `admins` only. Break-glass: `kubectl -n monitoring port-forward svc/vmsingle-vm 8428` |
+| VictoriaLogs | `https://logs.<app_domain>/select/vmui` | same. Break-glass: `kubectl -n monitoring port-forward svc/victoria-logs-server 9428` |
+| Alertmanager | `https://alertmanager.<app_domain>` | same. Break-glass: `kubectl -n monitoring port-forward svc/vmalertmanager-vm 9093` |
+| VMAlert | no route | `kubectl -n monitoring port-forward svc/vmalert-vm 8080`; rule state is in VMUI and Grafana too |
 
 Grafana is login-only because of the logs: in OSS Grafana every Viewer can
 query every datasource, and logs carry emails, IPs and whatever an app prints
-at startup. VictoriaLogs has no auth of its own, hence no route.
+at startup. VMUI, VictoriaLogs and Alertmanager have no auth of their own, so
+oauth2-proxy sits in front. Cilium's Gateway has no external-auth hook, so it
+is a reverse proxy in the data path, one container per hostname in one pod.
+One Pocket ID client and one cookie on `.<app_domain>`: a login on one is a
+login on all three. The Telegram *silence* link costs a passkey tap.
 
 Grafana sessions die with the pod (its sqlite is on an emptyDir).
 
@@ -60,7 +73,7 @@ Kustomization `infrastructure`; rules and scrapes in
 
 | Target | How | Job |
 |--|--|--|
-| k8s nodes, pods, PVCs | chart: node-exporter DaemonSet, kube-state-metrics, kubelet/cAdvisor, apiserver, CoreDNS | chart defaults |
+| k8s nodes, pods, PVCs | chart: node-exporter DaemonSet, kube-state-metrics, kubelet/cAdvisor, apiserver, CoreDNS; VM's own components | chart defaults |
 | NAS host + pools | node-exporter custom app on TrueNAS, plus a cron textfile for pool size | `nas` |
 | Garage | its admin `/metrics`, bearer `garage_metrics_token` | `garage` |
 | titan | node-exporter + pve-exporter (installed by machine-config), through `metrics-allow-proxmox` | `proxmox`, `pve` |
@@ -106,10 +119,15 @@ Lab rules, all labelled `origin: lab`:
 | `VictoriaLogsRetentionShort` | warning | its PVC > 90% of the 16GiB cap for 1h: logs dropped before 30d | same |
 | `VlagentDropping` | warning | a collector dropped log blocks in the last hour | same |
 
-Plus the ~134 rules the chart ships (pods crash-looping, PVC filling up,
-node pressure, `Watchdog`, ...). Find ours among them with `origin="lab"` in
-Alertmanager or `label:origin=lab` in Grafana. What each app alert means for
-that app is on its workload page.
+Plus the rules the chart ships (pods crash-looping, PVC filling up, node
+pressure, VictoriaMetrics health, `Watchdog`, ...). Find ours among them with
+`origin="lab"` in Alertmanager or `label:origin=lab` in Grafana. What each app
+alert means for that app is on its workload page.
+
+The chart's rules are not in the chart: its sync-job downloads them from
+GitHub at deploy time and writes them as `VMRule`s, again whenever the values
+change. Each source URL is pinned to a release tag in `release.yaml` (the
+chart's default is `master`); Renovate bumps the tags.
 
 ## Where alerts go {#routing}
 
@@ -122,20 +140,21 @@ notifications there too, set up in their UIs, not in this repo.
 | `telegram-critical` | `severity="critical"` | Telegram, with sound | every 4h |
 | `telegram` | everything else | Telegram, silent | every 12h |
 
-Grouped by `alertname, cluster, namespace`. The chart's default inhibition
-mutes a warning that a critical of the same alertname and namespace explains.
+Grouped by `alertname, cluster, namespace`. Inhibition is kube-prometheus'
+default, spelled out in `release.yaml` because this chart ships none: a
+critical mutes the warning of the same alertname and namespace.
 Each message links to Alertmanager (to silence) and Grafana.
 
 A notification per warning is how you learn to swipe warnings away, so
 warnings are silent. **Too noisy is fixed in the rule, not in the routing.**
 
-Grafana's own alerting is unused: one alerting engine, Prometheus. Grafana is
+Grafana's own alerting is unused: one alerting engine, VMAlert. Grafana is
 stateless, so a rule made in its UI is gone on the next restart.
 
 ### Watchdog heartbeat {#watchdog}
 
 `Watchdog` fires permanently by design. It is routed to a heartbeat URL
-(Cronitor) instead of the chat: when the pings stop -- because Prometheus, the
+(Cronitor) instead of the chat: when the pings stop -- because VictoriaMetrics, the
 cluster, the NAS or the WAN broke -- Cronitor notices, from outside the lab,
 which nothing inside it can, and sends an email. The URL is all the repo
 knows; the account and the email are configured in Cronitor.
@@ -166,7 +185,7 @@ The chart's own are off. Ours live flat in
 | Garage | upstream's: API requests + errors, disk I/O, resync and table queues |
 | Proxmox | quorum, storage fill, CPU, memory (usage + assigned), root fs, network per host; a guests table |
 
-Anything else: Prometheus via *Explore*. Logs: *Explore* -> VictoriaLogs; no
+Anything else: *Explore* -> VictoriaMetrics, or VMUI. Logs: *Explore* -> VictoriaLogs; no
 logs dashboard yet.
 
 ## Logs {#logs}
@@ -179,7 +198,7 @@ Every container in every namespace, nothing else: no Talos node logs
 |--|--|--|
 | vlagent | DaemonSet, tails `/var/log/containers`, ships to VictoriaLogs | `controllers/victoria-logs/collector.yaml` |
 | VictoriaLogs | single binary, StatefulSet `victoria-logs-server`, `:9428` | `controllers/victoria-logs/server.yaml` |
-| datasource | Grafana plugin `victoriametrics-logs-datasource`, uid `victoria-logs` | `controllers/kube-prometheus-stack/release.yaml` |
+| datasource | Grafana plugin `victoriametrics-logs-datasource`, uid `victoria-logs` | `controllers/victoria-metrics/release.yaml` |
 
 - **Retention:** 30d or 16GiB, whichever first, on a 20Gi `fast` PVC. Near
   the cap the oldest logs go first and `VictoriaLogsRetentionShort` fires:
@@ -222,7 +241,7 @@ not applied automatically: edit the app in TrueNAS and set the tag (see
 
 | What | Where | State? |
 |--|--|--|
-| Prometheus TSDB | `fast` PVC 20Gi; dropped after 30d or 18GB, size cap first | history only |
+| VMSingle | `fast` PVC 10Gi; dropped after 30d, **no size cap** | history only |
 | Alertmanager silences, notification log | `fast` PVC 1Gi | barely |
 | VictoriaLogs | `fast` PVC 20Gi (`server-volume-victoria-logs-server-0`); dropped after 30d or 16GiB | history only |
 | Grafana | emptyDir | no -- dashboards from ConfigMaps, users from Pocket ID |
@@ -233,24 +252,29 @@ Nothing is backed up -- see the [coverage matrix](backups.md#coverage-matrix).
 Everything that defines the stack is in git and the secrets in OpenBao; a
 lost PVC is lost history and silences. Delete the PVC, let Flux recreate it.
 
-**Verify** after a rebuild: Prometheus *Status* -> *Targets* all up;
+**Verify** after a rebuild: VMAgent's targets all up
+(`kubectl -n monitoring port-forward svc/vmagent-vm 8429`, then `/targets`);
 Alertmanager shows only `Watchdog` firing; Cronitor shows pings arriving; the
 Lab dashboard is all green; *Explore* -> VictoriaLogs shows lines from the
 last minute. Test the Telegram path with a throwaway alert:
 
 ```sh
-kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -- \
+kubectl -n monitoring exec vmalertmanager-vm-0 -- \
   amtool alert add TestAlert severity=warning --alertmanager.url=http://localhost:9093
 ```
 
 ## Admin
 
-- **A new rule**: a `PrometheusRule` beside the app (or in
+- **A new rule**: a `VMRule` beside the app (or in
   `infrastructure/configs/<x>/` for things outside the cluster), labels
-  `severity` and `origin: lab`, an annotation `summary`. Prometheus picks up
-  rules, monitors and scrape configs in every namespace.
-- **A new target outside the cluster**: a `ScrapeConfig` with
-  `staticConfigs`; if it is outside k8s, it also needs a firewall allow (see
+  `severity` and `origin: lab`, an annotation `summary`. VMAgent and VMAlert
+  pick up rules, scrapes and scrape configs in every namespace.
+- **A new target in the cluster**: a `VMServiceScrape` or `VMPodScrape`
+  beside it (most charts have a `vmServiceScrape` value).
+- **A new target outside the cluster**: a `VMScrapeConfig` with
+  `staticConfigs`, plus a `job` relabel -- it has no `jobName`, and the
+  operator's default (`scrapeConfig/<ns>/<name>`) matches nothing. Outside
+  k8s, it also needs a firewall allow (see
   [Networking](networking.md#firewall)).
 - **Changing a dashboard**: edit in the UI, *Share* -> *Export* -> paste over
   the JSON file, commit. An unexported edit is gone on the next restart. A new
@@ -260,8 +284,9 @@ kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -- 
 
 ## What breaks without it
 
-Prometheus or Alertmanager down: no alerts at all, but Cronitor notices
-within minutes. Grafana down: no dashboards, alerts unaffected. VictoriaLogs
+VMSingle, VMAgent, VMAlert or Alertmanager down: no alerts at all, but Cronitor notices
+within minutes. Grafana down: no dashboards, alerts unaffected. oauth2-proxy or Pocket ID
+down: VMUI, VictoriaLogs and Alertmanager only by port-forward. VictoriaLogs
 down: no logs in Grafana, collected later from the nodes' buffers. Nothing
 else depends on the stack.
 
@@ -274,9 +299,14 @@ else depends on the stack.
   then lost to a log line. The template uses HTML for that reason.
 - **No CPU limits** anywhere in the stack: they cause the throttling it
   watches for. Memory limits are leak ceilings.
-- **The logs datasource plugin is downloaded from grafana.com on every
-  Grafana start** (the pod is stateless). grafana.com unreachable: Grafana
-  starts without it, metrics unaffected. Renovate bumps its pin through the
-  `# renovate:` comment.
+- **Both datasource plugins are downloaded from grafana.com on every Grafana
+  start** (the pod is stateless). grafana.com unreachable: Grafana starts
+  without them -- no metrics, no logs; alerts unaffected. Renovate bumps the
+  pins through the `# renovate:` comments.
+- **VMSingle has no size cap.** A full volume stops ingestion instead of
+  trimming history. `KubePersistentVolumeFillingUp` warns first; grow the PVC
+  (online, never shrinks) before raising `retentionPeriod`.
+- **The chart's rules need `raw.githubusercontent.com`** at deploy time. The
+  sync-job failing leaves the previous `VMRule`s in place.
 - **Grafana at 400Mi** was ~200KiB under its peak and got killed on liveness;
   it has 1Gi now.

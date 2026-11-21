@@ -74,7 +74,7 @@ resource "unifi_firewall_group" "exporter_ports" {
 }
 
 
-# The one exception to the deny below. Prometheus runs in k8s and the Proxmox
+# The one exception to the deny below. VMAgent runs in k8s and the Proxmox
 # hosts are on Trusted, so scraping them crosses the zone pair -- narrow to
 # those addresses and those two read-only ports.
 resource "unifi_firewall_zone_policy" "metrics_allow" {

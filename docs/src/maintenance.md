@@ -45,8 +45,12 @@ depName=<plugin-id>` (`flux/renovate.json`). It reads the grafana.com catalog,
 which Grafana installs from; GitHub releases reach it days later, and a pin
 ahead of the catalog stops Grafana from starting.
 
+And it pins GitHub raw URLs (the chart rules victoria-metrics-k8s-stack
+fetches), above a `url: https://raw.githubusercontent.com/<owner>/<repo>/<tag>/...`
+line, with `datasource=github-tags depName=<owner>/<repo>`.
+
 Datasources in use: `helm`, `docker` (OCI charts), `github-releases`,
-`custom.grafana-plugins`. A CNPG `Cluster`'s `imageName:` is picked up by a
+`github-tags`, `custom.grafana-plugins`. A CNPG `Cluster`'s `imageName:` is picked up by a
 regex manager in `flux/renovate.json`. Add
 `extractVersion=^v(?<version>.+)$` when upstream tags carry a `v` the pin does
 not.
