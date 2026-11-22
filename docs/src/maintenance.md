@@ -28,6 +28,8 @@ outstanding.
   at a time (see below).
 - **Nextcloud** gets one PR per major: it cannot skip one. Merge them in
   order, one at a time -- see [Nextcloud](workloads/nextcloud.md#admin).
+- **Immich**'s server and ML images bump together in one PR; they must match.
+  Read the release notes first -- see [Immich](workloads/immich.md#admin).
 - **Images in our own Zot registry** are skipped; `mise run image` pushes and
   bumps those (see [Zot](platform/zot.md)).
 
@@ -255,6 +257,9 @@ talosctl -n "$NODE" health
   together -- see [DHS](workloads/dhs.md).
 - **Nextcloud's Postgres** is the CNPG image of its `Cluster`. A major is an
   in-place CNPG upgrade -- see [Nextcloud](workloads/nextcloud.md#admin).
+- **Immich's Postgres** is `<postgres>-<vectorchord>` in its `Cluster`.
+  Immich updates the extension itself; a Postgres major is an in-place CNPG
+  upgrade -- see [Immich](workloads/immich.md#admin).
 - **App images with migrations** (Vaultwarden, Pocket ID, ...) are not undone
   by reverting the tag; the way back is a restore. Check the app's page before
   merging a major.

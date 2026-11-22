@@ -6,8 +6,9 @@ The Postgres operator. It installs the `Cluster` CRD and its kin, watches
 every namespace, and runs databases declared beside the app that owns them.
 It runs no database itself.
 
-**One `Cluster`:** `nextcloud-db` in `nextcloud`, 1 instance -- see
-[Nextcloud](../workloads/nextcloud.md). DHS's postgres runs on its own box
+**Two `Cluster`s**, 1 instance each: `nextcloud-db` in `nextcloud` -- see
+[Nextcloud](../workloads/nextcloud.md) -- and `immich-db` in `immich`, on
+tensorchord's VectorChord image -- see [Immich](../workloads/immich.md). DHS's postgres runs on its own box
 outside the cluster (see [DHS](../workloads/dhs.md)).
 
 ## Access
@@ -59,5 +60,5 @@ healthy, so the CRDs exist by then.
 
 ## What breaks without it
 
-No failover, no reconciliation or maintenance of `nextcloud-db`; whether the
-instance keeps serving depends on CNPG's behaviour and is not tested here.
+No failover, no reconciliation or maintenance of `nextcloud-db` and `immich-db`;
+whether the instances keep serving depends on CNPG's behaviour and is not tested here.

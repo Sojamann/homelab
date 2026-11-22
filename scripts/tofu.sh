@@ -150,7 +150,8 @@ case "$layer" in
       bao_oidc_client_id bao_oidc_client_secret \
       memos_oidc_client_id memos_oidc_client_secret \
       mealie_oidc_client_id mealie_oidc_client_secret \
-      nextcloud_oidc_client_id nextcloud_oidc_client_secret; do
+      nextcloud_oidc_client_id nextcloud_oidc_client_secret \
+      immich_oidc_client_id immich_oidc_client_secret; do
       value="$(vault_require secrets/vault.yml "$key")"
       export "TF_VAR_$key=$value"
     done

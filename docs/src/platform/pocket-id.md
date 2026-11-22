@@ -89,6 +89,7 @@ secret costs a re-registration, not access.
 | Memos | `admins`, `household` | `apps/memos/instance.json`, see [Memos](../workloads/memos.md) | user `admin` |
 | Mealie | `admins`, `household` | env in `apps/mealie/server.yaml`, see [Mealie](../workloads/mealie.md) | `kubectl exec` password reset |
 | Nextcloud | `admins`, `household` | start hook in `apps/nextcloud/config/`, see [Nextcloud](../workloads/nextcloud.md) | user `admin` |
+| Immich | `admins`, `household` | `apps/immich/config.yaml`, see [Immich](../workloads/immich.md); custom claim `immich_role: admin` on group `admins` | `immich-admin` password reset |
 
 TrueNAS and Vaultwarden do not use it.
 
@@ -103,6 +104,6 @@ TrueNAS and Vaultwarden do not use it.
 
 ## What breaks without it
 
-SSO logins to Grafana, OpenBao, Proxmox, PBS, Memos, Mealie and Nextcloud -- each falls back to its
+SSO logins to Grafana, OpenBao, Proxmox, PBS, Memos, Mealie, Nextcloud and Immich -- each falls back to its
 break-glass login (table above). Nothing else; apps without SSO are
 unaffected.

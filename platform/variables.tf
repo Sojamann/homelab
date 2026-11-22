@@ -121,6 +121,17 @@ variable "nextcloud_oidc_client_secret" {
   sensitive   = true
 }
 
+variable "immich_oidc_client_id" {
+  description = "Immich's client id in Pocket ID"
+  type        = string
+}
+
+variable "immich_oidc_client_secret" {
+  description = "Immich's client secret in Pocket ID -- shown once, at registration"
+  type        = string
+  sensitive   = true
+}
+
 variable "bao_oidc_client_id" {
   description = "OpenBao's client id in Pocket ID"
   type        = string

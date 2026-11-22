@@ -38,9 +38,10 @@ graph LR
 ## Coverage {#coverage-matrix}
 
 - **`fast` + replica** ([ZFS](#zfs-snapshots)): Vaultwarden, Memos db,
-  Nextcloud db + html, Mealie, DHS dump, Pocket ID, OpenBao, VMSingle,
+  Nextcloud db + html, Immich db, Mealie, DHS dump, Pocket ID, OpenBao, VMSingle,
   Alertmanager, VictoriaLogs
 - **`bulk`** ([ZFS](#zfs-snapshots)): Memos attachments, Nextcloud files,
+  Immich photos,
   Kassenbuch, Supplement tracker, Zot
 - **[PBS](#pbs)**: VMs 160 (VPN), 161 (Home Assistant, plus
   [its own backups](#ha-backups)), 4010 (Talos)
@@ -368,5 +369,6 @@ before that resource runs. Untested here; upstream:
 
 ## Off-site (B2) {#off-site}
 
-**Not built.** Intended: Backblaze B2, Nextcloud's files first.
+**Not built.** Intended: Backblaze B2, Nextcloud's files and
+Immich's photos first.
 Until it exists, losing the NAS loses every backup on this page.

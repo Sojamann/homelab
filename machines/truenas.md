@@ -113,7 +113,8 @@ Rules:
 slow/
 ├── k8s-csi/         the NFS share root, one subdirectory per PV
 │   ├── memos/       a static PV, made by hand -- see below
-│   └── nextcloud/   likewise
+│   ├── nextcloud/   likewise
+│   └── immich/      likewise
 ├── garage/          S3, see S3 (Garage)
 │   ├── meta         metadata DB
 │   └── data         object blocks
@@ -178,6 +179,13 @@ owned by `www-data` (33) and not world-readable, or Nextcloud refuses it:
 
 ```sh
 mkdir -m 0770 /mnt/slow/k8s-csi/nextcloud && chown 33:33 /mnt/slow/k8s-csi/nextcloud
+```
+
+Immich's photos too (see [Immich](../docs/src/workloads/immich.md)), as
+upstream's rootless uid:
+
+```sh
+mkdir /mnt/slow/k8s-csi/immich && chown 1000:1000 /mnt/slow/k8s-csi/immich
 ```
 
 Personal files live there, not in `users/<name>/files` -- that share stays as

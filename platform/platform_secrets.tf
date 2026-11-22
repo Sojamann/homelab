@@ -232,6 +232,23 @@ resource "vault_kv_secret_v2" "nextcloud" {
 }
 
 ####################################
+#              IMMICH              #
+####################################
+
+# Rendered into Immich's config file by the immich-config ExternalSecret.
+resource "vault_kv_secret_v2" "immich" {
+  mount = vault_mount.kv.path
+  name  = "immich/app"
+
+  delete_all_versions = true
+
+  data_json = jsonencode({
+    oidc-client-id     = var.immich_oidc_client_id
+    oidc-client-secret = var.immich_oidc_client_secret
+  })
+}
+
+####################################
 #            TAILSCALE             #
 ####################################
 

@@ -89,11 +89,12 @@ side):
 
 | Order | PVC | Page | Note |
 |--|--|--|--|
-| 1 | `pocket-id-state` | [Pocket ID](platform/pocket-id.md) | first: SSO for Grafana, OpenBao, Proxmox, PBS, Memos, Mealie, Nextcloud. Its Kustomization is `infrastructure` -- suspending it pauses every controller |
+| 1 | `pocket-id-state` | [Pocket ID](platform/pocket-id.md) | first: SSO for Grafana, OpenBao, Proxmox, PBS, Memos, Mealie, Nextcloud, Immich. Its Kustomization is `infrastructure` -- suspending it pauses every controller |
 | 2 | `vaultwarden-data` | [Vaultwarden](workloads/vaultwarden.md) | |
 | 3 | `memos-data` | [Memos](workloads/memos.md) | the notes |
 | 4 | `mealie-data` | [Mealie](workloads/mealie.md) | the recipes |
 | 5 | `nextcloud-html`, `nextcloud-db-1` | [Nextcloud](workloads/nextcloud.md#backup--restore) | config.php's secret; then the files rescan |
+| 6 | `immich-db-1` | [Immich](workloads/immich.md#backup--restore) | albums, faces, every photo's path |
 | -- | `postgres-dump` | [DHS](workloads/dhs.md) | nothing to restore: a staging copy, its history stays in the old zvol's snapshots |
 
 Do the restores as soon as Flux is Ready, before anyone uses the fresh apps.
@@ -107,12 +108,13 @@ still there: scale the app to 0, copy the old directory's contents into the
 new one on the NAS, scale up -- as in
 [ZFS snapshots, *Restore a `bulk` PVC*](backups.md#zfs-snapshots) with the
 old directory as source. Zot can instead be refilled by pushing the images again.
-Memos' attachments and Nextcloud's files are static PVs onto
-`slow/k8s-csi/memos` and `slow/k8s-csi/nextcloud` and need nothing.
+Memos' attachments, Nextcloud's files and Immich's photos are static PVs onto
+`slow/k8s-csi/memos`, `slow/k8s-csi/nextcloud` and `slow/k8s-csi/immich` and
+need nothing.
 
 **Not restored, rebuilt:** VictoriaMetrics, Alertmanager and VictoriaLogs history (gone),
 Grafana (stateless), Glance (stateless), OpenBao (from tofu), the CloudNativePG
-operator (from git; Nextcloud's database comes back with its zvol, above).
+operator (from git; Nextcloud's and Immich's databases come back with their zvols, above).
 
 ## How to tell you're done
 
@@ -131,7 +133,7 @@ pvesm list pbs-s3 | tail                    # tonight's 23:00 run is there tomor
   [Workloads](workloads/index.md).
 - From the tailnet, away from home: `https://passwords.<app_domain>` loads
   ([Networking](networking.md#tailscale)).
-- Pocket ID login works on Grafana, OpenBao, Proxmox, PBS, Memos, Mealie and
-  Nextcloud.
+- Pocket ID login works on Grafana, OpenBao, Proxmox, PBS, Memos, Mealie,
+  Nextcloud and Immich.
 - `git status` and `git -C secrets status -sb` clean and pushed -- the new
   root token and any regenerated state are backed up.

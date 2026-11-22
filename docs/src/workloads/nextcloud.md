@@ -3,7 +3,8 @@
 ## What it's for
 
 The household's files in a browser and on phones: upload, share links,
-desktop and mobile sync. Files only -- no calendar, contacts or photos. SMB
+desktop and mobile sync. Files only -- no calendar, contacts or photos
+(photos are [Immich](immich.md)). SMB
 shares stay as they are, and Nextcloud's files are its own. Using it is upstream:
 [Nextcloud user manual](https://docs.nextcloud.com/server/latest/user_manual/en/).
 
@@ -130,7 +131,8 @@ proposes bumps (see [Maintenance](../maintenance.md)). The image runs
 
 ### Not enabled
 
-- **Calendar, contacts, photos, office.** Files only, by decision.
+- **Calendar, contacts, photos, office.** Files only, by decision; photos
+  are [Immich](immich.md).
 - **Redis.** Not needed at this size; add it for locking if the db's file
   locks show up as slow.
 - **Metrics.** None of its own; pod and PVC alerts are the chart's.

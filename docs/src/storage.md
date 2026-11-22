@@ -45,12 +45,14 @@ graph TD
 | `postgres-dump` (DHS) | `fast` | 5Gi | ZFS snapshots + replica |
 | `nextcloud-html` | `fast` | 5Gi | ZFS snapshots + replica |
 | `nextcloud-db-1` (CNPG) | `fast` | 5Gi | ZFS snapshots + replica, crash-consistent |
+| `immich-db-1` (CNPG) | `fast` | 5Gi | ZFS snapshots + replica, crash-consistent |
 | `data-openbao-0` | `fast` | 1Gi | ZFS snapshots + replica; rebuilt by tofu anyway |
 | VMSingle | `fast` | 10Gi (30d, no size cap) | ZFS snapshots + replica (history only) |
 | VictoriaLogs | `fast` | 20Gi (capped at 16GiB, 30d) | ZFS snapshots + replica (history only) |
 | Alertmanager | `fast` | 1Gi | ZFS snapshots + replica (history only) |
 | `memos-assets` -> `slow/k8s-csi/memos` | `bulk`, static PV | 5Gi (label only) | ZFS snapshots |
 | `nextcloud-data` -> `slow/k8s-csi/nextcloud` | `bulk`, static PV | 500Gi (label only) | ZFS snapshots |
+| `immich-data` -> `slow/k8s-csi/immich` | `bulk`, static PV | 500Gi (label only) | ZFS snapshots |
 | `kassenbuch-data` | `bulk` | 10Gi | ZFS snapshots |
 | `supplement-tracker-data` | `bulk` | 1Gi | ZFS snapshots |
 | `zot-data` | `bulk` | 20Gi (label only) | ZFS snapshots |
@@ -158,10 +160,11 @@ one directory per PV and has no API to the NAS, which is why the dataset
 - **`no_root_squash`.** The driver and the kubelet (`fsGroup`) both `chown` as
   root on the mount; squashed, the volume mounts and the pod cannot write. So
   anything that can reach `10.212.4.150` on k8s is root on the share.
-- **Memos' attachments and Nextcloud's files are static `Retain` PVs** onto
-  `slow/k8s-csi/memos` and `slow/k8s-csi/nextcloud`, made by hand, so no PVC
-  delete can take them. See [Memos](workloads/memos.md),
-  [Nextcloud](workloads/nextcloud.md).
+- **Memos' attachments, Nextcloud's files and Immich's photos are static
+  `Retain` PVs** onto `slow/k8s-csi/memos`, `slow/k8s-csi/nextcloud` and
+  `slow/k8s-csi/immich`, made by hand, so no PVC delete can take them. See
+  [Memos](workloads/memos.md), [Nextcloud](workloads/nextcloud.md),
+  [Immich](workloads/immich.md).
 
 ## Admin
 
