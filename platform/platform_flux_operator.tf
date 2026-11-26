@@ -1,7 +1,7 @@
 # installing: Flux Operator + Flux Instance
 locals {
   # renovate: datasource=docker depName=ghcr.io/controlplaneio-fluxcd/charts/flux-operator
-  flux_operator_version = "0.63.0" # chart == operator
+  flux_operator_version = "0.64.0" # chart == operator
   # renovate: datasource=github-releases depName=fluxcd/flux2 extractVersion=^v(?<version>.+)$
   flux_version = "2.10.1" # the distribution it installs
 
