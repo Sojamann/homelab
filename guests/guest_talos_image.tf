@@ -1,6 +1,6 @@
 locals {
   # renovate: datasource=github-releases depName=siderolabs/talos
-  talos_version = "v1.14.6"
+  talos_version = "v1.14.7"
 
   # Extensions are baked into the image, so changing this list means a new
   # schematic, a new image and a `talosctl upgrade` onto it -- a reboot, and on
