@@ -13,7 +13,7 @@
 locals {
   # Chart 5.4.0 -> external-snapshotter v8.7.0.
   # renovate: datasource=helm depName=snapshot-controller registryUrl=https://piraeus.io/helm-charts/
-  snapshot_controller_version = "5.4.0"
+  snapshot_controller_version = "5.4.1"
 }
 
 resource "helm_release" "snapshot_controller" {
